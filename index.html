@@ -72,6 +72,10 @@ input[type=color]{width:100%;height:28px;border:1px solid var(--line);border-rad
 .tog{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .tog input{accent-color:var(--accent);width:16px;height:16px}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
+.presets+.actions{margin-top:8px}
+.preset{position:relative}
+.preset .del{position:absolute;top:2px;right:4px;color:var(--mute);font-size:13px;line-height:1;padding:2px 4px;border-radius:4px}
+.preset .del:hover{color:var(--fg);background:#ffffff14}
 .btn.rec{border-color:#ff4a4a;color:#ff8a8a}
 .upload{display:grid;gap:6px;justify-items:start}
 .upload small{color:var(--mute);font-size:11px;line-height:1.4}
@@ -98,7 +102,15 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
       <h1>Disc Spine</h1>
       <p class="sub">Kéo: xoay · Chuột phải hoặc Shift + kéo: dời camera · Cuộn / pinch: zoom · Double-click: đặt lại góc nhìn.</p>
     </div>
-    <details class="sec" open><summary>Preset</summary><div class="body"><div class="presets" id="presets"></div></div></details>
+    <details class="sec" open><summary>Preset</summary><div class="body"><div class="presets" id="presets"></div>
+      <div class="actions">
+        <button class="btn" id="savePreset">Lưu preset</button>
+        <button class="btn" id="pasteJSON">Dán JSON</button>
+        <button class="btn" id="dlJSON">Tải file JSON</button>
+        <label class="btn" for="presetFile">Mở file JSON</label>
+        <input type="file" id="presetFile" accept=".json,application/json" hidden>
+      </div>
+    </div></details>
     <details class="sec" open><summary>Chuyển động</summary><div class="body">
       <div id="g-motion" class="body" style="padding:0"></div>
     </div></details>
@@ -867,9 +879,12 @@ function buildUI(){
     b.innerHTML=`<i style="background:linear-gradient(90deg,${(p.stops||p.c).join(',')})"></i>${p.name}`;
     b.addEventListener('click',()=>{S.pal=k;applyLook();syncUI();});pals.appendChild(b);});
   const pr=$('presets');
-  PRESETS.forEach(p=>{const pal=PALETTES[p.set.pal||DEF.pal];const b=document.createElement('button');b.className='preset';b.dataset.v=p.id;
-    b.innerHTML=`<i style="background:radial-gradient(circle at 35% 35%,${pal.c[3]},${pal.c[0]})"></i><span>${p.name}<small>${p.note}</small></span>`;
-    b.addEventListener('click',()=>loadPreset(p.id));pr.appendChild(b);});
+  PRESETS.forEach(addPresetButton);
+  SAVED.forEach(addPresetButton);
+  $('savePreset').addEventListener('click',savePreset);
+  $('pasteJSON').addEventListener('click',pasteDialog);
+  $('dlJSON').addEventListener('click',()=>{const u=URL.createObjectURL(new Blob([settingsJSON()],{type:'application/json'})); download(u,`disc-spine-${activePreset}-${stamp()}.json`); setTimeout(()=>URL.revokeObjectURL(u),4000);});
+  $('presetFile').addEventListener('change',e=>{const f=e.target.files[0]; e.target.value=''; if(f) f.text().then(t=>importSettings(t)&&toast('Đã nạp '+f.name));});
   buildSliders();
   $('t-spine').addEventListener('change',e=>{S.spine=e.target.checked;});
   $('t-avoid').addEventListener('change',e=>{S.avoid=e.target.checked;});
@@ -931,7 +946,65 @@ function syncUI(){
   $('pause').textContent=paused?'Chạy tiếp':'Tạm dừng';
   resize();
 }
+function addPresetButton(p){
+  const pal=PALETTES[p.set.pal]||p.set.palette||PALETTES[DEF.pal], b=document.createElement('button'); b.className='preset'; b.dataset.v=p.id;
+  b.innerHTML=`<i style="background:radial-gradient(circle at 35% 35%,${pal.c[3]},${pal.c[0]})"></i><span></span>`;
+  b.querySelector('span').innerHTML=`${esc(p.name)}<small>${esc(p.note)}</small>`;
+  b.addEventListener('click',()=>loadPreset(p.id));
+  if(p.saved){ const x=document.createElement('span'); x.className='del'; x.textContent='×'; x.title='Xoá preset';
+    x.addEventListener('click',e=>{e.stopPropagation(); if(!confirm(`Xoá preset "${p.name}"?`)) return;
+      SAVED=SAVED.filter(q=>q.id!==p.id); storeSaved(); b.remove();}); b.appendChild(x); }
+  $('presets').appendChild(b);
+}
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- saved presets + JSON import ---------- */
+let SAVED=[];
+const BUILTIN_PALS=Object.keys(PALETTES);
+try{ SAVED=JSON.parse(localStorage.getItem('discspine.presets')||'[]').filter(p=>p&&p.id&&p.set); }catch(_){}
+function storeSaved(){ try{localStorage.setItem('discspine.presets',JSON.stringify(SAVED)); return true;}catch(_){ toast('Trình duyệt không cho lưu, hãy dùng Tải file JSON'); return false; } }
+function currentSettings(){
+  const out=Object.assign({},S); out.palette=PALETTES[S.pal];
+  if(S.skel==='upload'&&upPts) out.points=upPts.map(p=>[+p.x.toFixed(3),+p.y.toFixed(3),+p.z.toFixed(3)]);
+  return out;
+}
+const settingsJSON=()=>JSON.stringify(currentSettings(),null,2);
+// apply a settings object (from Copy settings, a saved preset or a file); unknown keys are ignored
+function applySettings(o){
+  if(!o||typeof o!=='object') throw new Error('JSON không phải object settings');
+  const set={}; for(const k in DEF) if(k in o) set[k]=o[k];
+  const p=o.palette;
+  if(p&&Array.isArray(p.c)&&Array.isArray(p.bg)){
+    // built-in palettes are referenced by name; custom ones travel with the JSON
+    const k=o.pal||'json';
+    if(!BUILTIN_PALS.includes(k)){ PALETTES[k]=p; addPalButton(k); }
+    set.pal=k;
+  }
+  if(!(set.pal in PALETTES)) delete set.pal;
+  if(Array.isArray(o.points)&&o.points.length>1)
+    upPts=resample(o.points.map(q=>new THREE.Vector3(+q[0]||0,+q[1]||0,+q[2]||0)),!!o.upClosed,140);
+  S=Object.assign({},DEF,set); targetInit=false; applyLook(); syncUI();
+}
+function importSettings(text){
+  try{ applySettings(JSON.parse(text)); activePreset=''; syncUI(); return true; }
+  catch(e){ toast('JSON không hợp lệ: '+(e.message||e)); return false; }
+}
+function savePreset(){
+  const name=(prompt('Tên preset:','Preset '+(SAVED.length+1))||'').trim(); if(!name) return;
+  const p={id:'u'+Date.now().toString(36),name,note:'Đã lưu',saved:true,set:currentSettings()};
+  SAVED.push(p); if(storeSaved()){ addPresetButton(p); activePreset=p.id; syncUI(); toast('Đã lưu preset trên trình duyệt này'); }
+}
+function pasteDialog(){
+  const m=document.createElement('div'); m.className='modal';
+  m.innerHTML=`<div class="card"><p>Dán JSON từ Copy settings (hoặc file JSON) vào đây:</p><textarea style="width:100%;height:280px;background:#0f1116;color:var(--fg);border:1px solid var(--line);border-radius:8px;font-family:var(--f-mono);font-size:11px"></textarea><div class="actions"><button class="btn" id="mapply">Áp dụng</button><button class="btn" id="mclose">Đóng</button></div></div>`;
+  document.body.appendChild(m); const ta=m.querySelector('textarea'); ta.focus();
+  m.addEventListener('click',e=>{
+    if(e.target===m||e.target.id==='mclose') m.remove();
+    else if(e.target.id==='mapply'&&importSettings(ta.value)){ m.remove(); toast('Đã áp dụng settings'); }
+  });
+}
 function loadPreset(id){
+  const u=SAVED.find(x=>x.id===id); if(u){ applySettings(u.set); activePreset=id; syncUI(); return; }
   const p=PRESETS.find(x=>x.id===id); activePreset=id;
   const keep={spine:S.spine,seed:S.seed,closed:S.closed,avoid:S.avoid,autoRot:S.autoRot,upClosed:S.upClosed,upDepth:S.upDepth,upFreq:S.upFreq};
   S=Object.assign({},DEF,p.set,keep); targetInit=false; applyLook(); syncUI();
@@ -977,8 +1050,7 @@ function toggleRecord(){
   tick(); recTimer=setInterval(tick,500);
 }
 function copySettings(){
-  const out=Object.assign({},S); out.palette=PALETTES[S.pal]; if(S.skel==='upload'&&upPts) out.points=upPts.map(p=>[+p.x.toFixed(3),+p.y.toFixed(3),+p.z.toFixed(3)]);
-  const txt=JSON.stringify(out,null,2);
+  const txt=settingsJSON();
   navigator.clipboard.writeText(txt).then(()=>toast('Đã copy settings'),()=>{
     const m=document.createElement('div'); m.className='modal';
     m.innerHTML=`<div class="card"><p>Copy đoạn JSON này:</p><textarea id="jsonOut" style="width:100%;height:280px;background:#0f1116;color:var(--fg);border:1px solid var(--line);border-radius:8px;font-family:var(--f-mono);font-size:11px"></textarea><button class="btn" id="mclose">Đóng</button></div>`;
