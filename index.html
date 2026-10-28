@@ -302,16 +302,16 @@ const U={uC0:{value:new THREE.Color()},uC1:{value:new THREE.Color()},uC2:{value:
 const mat=new THREE.MeshStandardMaterial({roughness:0.82,metalness:0,side:THREE.DoubleSide});
 mat.onBeforeCompile=sh=>{
   Object.assign(sh.uniforms,U);
-  sh.vertexShader=`attribute float aEdge; attribute float aSide; attribute float aT; attribute float aIdx;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
+  sh.vertexShader=`attribute float aEdge; attribute float aSide; attribute float aT; attribute float aIdx; attribute float aVis;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
 `+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-  vL=position.xy; vEdge=aEdge; vSide=aSide; vT=aT; vIdx=aIdx;
+  vL=position.xy; vEdge=aEdge; vSide=aSide; vT=aT; vIdx=aIdx; vVis=aVis;
   vWN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
   vLP = (instanceMatrix * vec4(transformed,1.0)).xyz;
   vAX = mat3(instanceMatrix)[0]; vAY = mat3(instanceMatrix)[1]; vAZ = mat3(instanceMatrix)[2];`);
   sh.fragmentShader=`uniform vec3 uC0,uC1,uC2,uC3,uLine,uRim,uHi,uDeep;
 uniform float uStripe,uSplit,uOutline,uGrad,uFlat,uGlass,uPaper,uGradAxis,uCyclic;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
 uniform vec3 uS0,uS1,uS2,uS3,uS4,uS5,uRimC,uCamL,uLightL;
 uniform float uBulge,uShade;
 uniform float uHalo,uHaloW,uRimW,uDither,uShift,uCount,uShape;
@@ -396,7 +396,7 @@ vec3 discColor(){
   return c;
 }
 `+sh.fragmentShader
-    .replace('vec4 diffuseColor = vec4( diffuse, opacity );','vec4 diffuseColor = vec4( discColor(), opacity );')
+    .replace('vec4 diffuseColor = vec4( diffuse, opacity );','if(vVis<.999 && hh(gl_FragCoord.xy*.73+vIdx)>vVis) discard;\n  vec4 diffuseColor = vec4( discColor(), opacity );')
     .replace('#include <tonemapping_fragment>',`
   {
     vec3 flatC = discColor();
@@ -418,7 +418,7 @@ vec3 discColor(){
 mat.extensions={derivatives:true};
 const depthMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});
 
-let mesh=null,aT=null,aIdx=null,builtKey='',nbData=null,nbTex=null;
+let mesh=null,aT=null,aIdx=null,aVis=null,builtKey='',nbData=null,nbTex=null;
 function ensureMesh(){
   const key=S.shape+'|'+S.count+'|'+S.thick.toFixed(3);
   if(key===builtKey) return;
@@ -427,7 +427,8 @@ function ensureMesh(){
   const g=buildGeometry(S.shape,S.thick);
   aT=new THREE.InstancedBufferAttribute(new Float32Array(S.count),1);aT.setUsage(THREE.DynamicDrawUsage);
   aIdx=new THREE.InstancedBufferAttribute(new Float32Array(S.count),1);aIdx.setUsage(THREE.DynamicDrawUsage);
-  g.setAttribute('aT',aT);g.setAttribute('aIdx',aIdx);
+  aVis=new THREE.InstancedBufferAttribute(new Float32Array(S.count).fill(1),1);aVis.setUsage(THREE.DynamicDrawUsage);
+  g.setAttribute('aT',aT);g.setAttribute('aIdx',aIdx);g.setAttribute('aVis',aVis);
   mesh=new THREE.InstancedMesh(g,mat,S.count);
   mesh.customDepthMaterial=depthMat;
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -656,14 +657,15 @@ const X=V3(),Y=V3(),Z=V3();
 function layout(){
   const modeA=false, ph=0.7;
   buildTable(ph);
-  const closed=isClosed(), n=S.count, arr=mesh.instanceMatrix.array, at=aT.array, ai=aIdx.array;
+  const closed=isClosed(), n=S.count, arr=mesh.instanceMatrix.array, at=aT.array, ai=aIdx.array, av=aVis.array;
   const k=3, wph=modeA?0:time*1.3, flow=modeA?0:time*0.06*S.flow*2;
   const bound=SHAPE_BOUND[S.shape];
   for(let i=0;i<n;i++){
-    let u0=closed?i/n:(n>1?i/(n-1):.5), env=1;
+    let u0=closed?i/n:(n>1?i/(n-1):.5), env=1, vis=1;
     if(!modeA){
       u0=closed?(i/n+flow)%1:((i+.5)/n+flow)%1;
-      if(!closed) env=Math.min(S.spawnK+(1-S.spawnK)*sm(0,Math.max(S.growL,1e-3),u0),(1-u0)/.07,1);
+      if(!closed){ const g=sm(0,Math.max(S.growL,1e-3),u0);
+        env=Math.min(S.spawnK+(1-S.spawnK)*g,(1-u0)/.07,1); if(S.spawnK>0) vis=g; }
     }
     const ph2=TAU*k*u0-wph;
     let u=u0+S.bunch*Math.sin(ph2)/(TAU*k);
@@ -684,10 +686,13 @@ function layout(){
     SC[i3]=_p.x;SC[i3+1]=_p.y;SC[i3+2]=_p.z;
     SX[i3]=X.x;SX[i3+1]=X.y;SX[i3+2]=X.z; SY[i3]=Y.x;SY[i3+1]=Y.y;SY[i3+2]=Y.z; SZ[i3]=Z.x;SZ[i3+1]=Z.y;SZ[i3+2]=Z.z;
     SA[i]=scale*bound[0]; SB[i]=scale*S.aspect*bound[1]; SR[i]=Math.max(SA[i],SB[i]);
-    at[i]=u; ai[i]=i;
+    at[i]=u; ai[i]=i; av[i]=vis;
   }
   U.uGradAxis.value=(bound[1]*S.aspect<bound[0]*0.9)?1:0; U.uCyclic.value=closed?1:0;
+  // a layer that is still dissolving in only counts for its visible share, so neighbours make room gradually
+  const fading=[]; for(let i=0;i<n;i++) if(av[i]<1){ fading.push([i,SA[i],SB[i],SR[i]]); SA[i]*=av[i]; SB[i]*=av[i]; SR[i]*=av[i]; }
   if(S.avoid) solve(n); else { for(let i=0;i<n;i++) SF[i]=1; lastContacts=0; }
+  for(const [i,a,b,r] of fading){ SA[i]=a; SB[i]=b; SR[i]=r; }
   for(let i=0;i<n;i++){
     const i3=i*3,o=i*16, b=SHAPE_BOUND[S.shape], sx=SA[i]/b[0]*SF[i], sy=SB[i]/b[1]*SF[i], sz=sx>0?1:0;
     arr[o]=SX[i3]*sx;arr[o+1]=SX[i3+1]*sx;arr[o+2]=SX[i3+2]*sx;arr[o+3]=0;
@@ -701,7 +706,7 @@ function layout(){
     nbData[3*W+i*4]=SZ[i3];nbData[3*W+i*4+1]=SZ[i3+1];nbData[3*W+i*4+2]=SZ[i3+2];
   }
   nbTex.needsUpdate=true; U.uShape.value=['disc','petal','leaf','tile'].indexOf(S.shape);
-  mesh.instanceMatrix.needsUpdate=true; aT.needsUpdate=true; aIdx.needsUpdate=true;
+  mesh.instanceMatrix.needsUpdate=true; aT.needsUpdate=true; aIdx.needsUpdate=true; aVis.needsUpdate=true;
   spineLine.visible=S.spine;
   if(S.spine){const pa=spineGeo.attributes.position.array; for(let j=0;j<=SPN;j++){const q=P[Math.round(j/SPN*M)];pa[j*3]=q.x;pa[j*3+1]=q.y;pa[j*3+2]=q.z;} spineGeo.attributes.position.needsUpdate=true;}
 }
@@ -1073,7 +1078,7 @@ window.addEventListener('keydown',e=>{
 try{ const m=JSON.parse(localStorage.getItem('discspine.mine')||'null'); if(m&&Array.isArray(m.stops)&&m.stops.length===6) PALETTES.mine=m; }catch(_){}
 buildUI(); buildEditor(); if(PALETTES.mine) addPalButton('mine'); applyLook(); syncUI();
 requestAnimationFrame(frameLoop);
-window.__disc={get S(){return S;},loadPreset,set:(o)=>{Object.assign(S,o);applyLook();syncUI();},setTime:t=>{time=t;},pause:()=>{paused=true;},contacts:()=>lastContacts};
+window.__disc={get S(){return S;},loadPreset,set:(o)=>{Object.assign(S,o);applyLook();syncUI();},setTime:t=>{time=t;},pause:()=>{paused=true;},contacts:()=>lastContacts,step:dt=>{time+=dt*S.speed;ensureMesh();layout();return {m:mesh.instanceMatrix.array,v:aVis.array};}};
 })();
 </script>
 </body>
