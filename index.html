@@ -72,6 +72,7 @@ input[type=color]{width:100%;height:28px;border:1px solid var(--line);border-rad
 .tog{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .tog input{accent-color:var(--accent);width:16px;height:16px}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
+.btn.rec{border-color:#ff4a4a;color:#ff8a8a}
 .upload{display:grid;gap:6px;justify-items:start}
 .upload small{color:var(--mute);font-size:11px;line-height:1.4}
 .upload label.btn{display:inline-block}
@@ -142,6 +143,8 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
       <div class="actions">
         <button class="btn" id="pause">Tạm dừng</button>
         <button class="btn" id="snap">Chụp khung hình</button>
+        <button class="btn" id="png">Export PNG</button>
+        <button class="btn" id="mp4">Export MP4</button>
         <button class="btn" id="copy">Copy settings</button>
       </div>
       <div class="keys"><kbd>Space</kbd> dừng · <kbd>1</kbd> <kbd>2</kbd> đổi mode · <kbd>S</kbd> hiện khung</div>
@@ -881,6 +884,8 @@ function buildUI(){
   $('pause').addEventListener('click',togglePause);
   $('resetCam').addEventListener('click',resetCam);
   $('snap').addEventListener('click',snap);
+  $('png').addEventListener('click',exportPNG);
+  $('mp4').addEventListener('click',toggleRecord);
   $('copy').addEventListener('click',copySettings);
 }
 function togglePause(){paused=!paused;$('pause').textContent=paused?'Chạy tiếp':'Tạm dừng';}
@@ -937,6 +942,39 @@ function snap(){
   const m=document.createElement('div'); m.className='modal';
   m.innerHTML=`<div class="card"><img alt="Khung hình đã chụp" src="${url}"><p>Nhấn giữ hoặc chuột phải vào ảnh để lưu.</p><button class="btn" id="mclose">Đóng</button></div>`;
   document.body.appendChild(m); m.addEventListener('click',e=>{if(e.target===m||e.target.id==='mclose')m.remove();});
+}
+/* ---------- export ---------- */
+const stamp=()=>new Date().toISOString().slice(0,19).replace(/[-:T]/g,'');
+function download(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove();}
+function exportPNG(){
+  render(0); // draw now so the buffer is still valid when we read it
+  cv.toBlob(b=>{ if(!b) return toast('Không xuất được PNG'); const u=URL.createObjectURL(b); download(u,`disc-spine-${activePreset}-${stamp()}.png`); setTimeout(()=>URL.revokeObjectURL(u),4000); toast('Đã lưu PNG'); },'image/png');
+}
+// records the live canvas; MP4 (H.264) where the browser can encode it, WebM otherwise
+let rec=null, recChunks=[], recTimer=0;
+function toggleRecord(){
+  const btn=$('mp4');
+  if(rec){ rec.stop(); return; }
+  if(!window.MediaRecorder||!cv.captureStream) return toast('Trình duyệt không hỗ trợ quay video');
+  const types=['video/mp4;codecs=avc1.640033','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const type=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  const ext=type.startsWith('video/mp4')?'mp4':'webm';
+  const stream=cv.captureStream(60);
+  try{ rec=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:16e6}); }catch(_){ return toast('Không quay được video'); }
+  recChunks=[];
+  rec.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
+  rec.onstop=()=>{
+    clearInterval(recTimer); stream.getTracks().forEach(t=>t.stop());
+    const u=URL.createObjectURL(new Blob(recChunks,{type:type||'video/webm'}));
+    download(u,`disc-spine-${activePreset}-${stamp()}.${ext}`); setTimeout(()=>URL.revokeObjectURL(u),10000);
+    rec=null; btn.classList.remove('rec'); btn.textContent='Export MP4';
+    toast(ext==='mp4'?'Đã lưu MP4':'Trình duyệt này chỉ quay được WebM, đã lưu .webm');
+  };
+  if(paused) togglePause();
+  rec.start(250); btn.classList.add('rec');
+  const t0=performance.now();
+  const tick=()=>{ const s=Math.floor((performance.now()-t0)/1000); btn.textContent=`● Dừng & lưu ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
+  tick(); recTimer=setInterval(tick,500);
 }
 function copySettings(){
   const out=Object.assign({},S); out.palette=PALETTES[S.pal]; if(S.skel==='upload'&&upPts) out.points=upPts.map(p=>[+p.x.toFixed(3),+p.y.toFixed(3),+p.z.toFixed(3)]);
