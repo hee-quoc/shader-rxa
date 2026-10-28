@@ -198,7 +198,7 @@ const PALETTES={
 const DEF={
   mode:'A',speed:0.6,amp:1,flow:0.5,
   skel:'column',closed:true,seed:7,spine:false,upClosed:false,upDepth:0.8,upFreq:1,upDepthK:1,
-  shape:'disc',count:7,size:2.55,taper:0.08,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
+  shape:'disc',count:7,size:2.55,taper:0.08,headK:1,tailK:1,headCurl:1,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
   fan:82,lean:2,pleat:0,pleatFreq:3,twist:0,bunch:0,foldK:0,
   pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
   ratio:'3:4',
@@ -461,7 +461,7 @@ const SKELS={
     // s: tail (0) -> head (1). Body undulates in two planes, wave fades toward the head, head rears up and curls back.
     const amp=(0.6+0.4*a), hl=sm(0.8,1,s), tl=sm(0.14,0,s);
     let x=-4.6+9.2*s, y=(1.3-0.6*s)*Math.sin(TAU*1.25*s-ph)*amp, z=1.5*a*Math.sin(TAU*0.7*s-ph*0.8+0.6)*(1-0.5*hl);
-    y+=2.3*hl*hl-0.7*tl; x-=1.1*hl*hl*hl; z+=0.4*tl*Math.sin(ph);
+    y+=2.3*hl*hl*S.headCurl-0.7*tl; x-=1.1*hl*hl*hl*S.headCurl; z+=0.4*tl*Math.sin(ph);
     o.set(x,y,z);}},
   dragonCoil:{name:'Rồng cuộn',closed:false,f(s,ph,a,o){ s=1-s;
     // body coils around a vertical axis, then the neck rises out of the coil and the head pushes forward
@@ -671,7 +671,8 @@ function layout(){
     const comp=S.bunch*Math.cos(ph2);
     sample(u);
     if(S.stack) _p.addScaledVector(_b,S.stack*S.size*(u0-0.5)*2);
-    const scale=S.size*Math.max(0.02,1-S.taper*u)*Math.max(env,0);
+    const ends=(1+(S.headK-1)*(1-sm(0,0.35,u)))*(1+(S.tailK-1)*sm(0.65,1,u));
+    const scale=S.size*Math.max(0.02,1-S.taper*u)*ends*Math.max(env,0);
     const tilt=(S.lean+S.fan*u)*DEG+S.pleat*DEG*Math.sin(TAU*u*S.pleatFreq)+S.foldK*(-comp)*1.1;
     const roll=S.twist*TAU*u, cr=Math.cos(roll), sr=Math.sin(roll);
     X.copy(_n).multiplyScalar(cr).addScaledVector(_b,sr);
@@ -760,11 +761,13 @@ cv.addEventListener('dblclick',resetCam);
 /* ---------- sizing ---------- */
 const stage=document.getElementById('stage'), frame=document.getElementById('frame');
 const RATIOS={'3:4':3/4,'1:1':1,'4:3':4/3,'9:16':9/16,'16:9':16/9,'Fill':0};
+let hiRes=false; // true while exporting: drawing buffer long side = 2048 px
 function resize(){
   const W=stage.clientWidth-28,H=stage.clientHeight-28,r=RATIOS[S.ratio]; let w,h;
   if(r){ if(W/H>r){h=H;w=H*r;} else {w=W;h=W/r;} } else {w=stage.clientWidth;h=stage.clientHeight;}
   w=Math.max(50,Math.floor(w)); h=Math.max(50,Math.floor(h));
   frame.style.width=w+'px'; frame.style.height=h+'px'; frame.style.borderRadius=r?'14px':'0';
+  renderer.setPixelRatio(hiRes?2048/Math.max(w,h):Math.min(window.devicePixelRatio||1,2));
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(stage);
@@ -837,7 +840,7 @@ const SLIDERS={
            ['rotX','Xoay vật thể X',-180,180,1],['rotY','Xoay vật thể Y',-180,180,1],['rotZ','Xoay vật thể Z',-180,180,1]],
   'g-skel':[],
   'g-up':[['upDepth','Độ sâu Z (khung upload)',0,4,.01],['upFreq','Số sóng Z',0,6,.1]],
-  'g-layer':[['count','Số lớp',3,400,1],['size','Kích thước',.2,3,.01],['taper','Thon dần (đầu → đuôi)',-1,.95,.01],['aspect','Tỉ lệ dẹt',.12,1.6,.01],['thick','Độ dày',0,.08,.001],['stack','Xếp tầng (lệch chiều sâu)',0,2,.01],['gap','Khoảng hở tối thiểu',0,.2,.005]],
+  'g-layer':[['count','Số lớp',3,400,1],['size','Kích thước',.2,3,.01],['taper','Thon dần (đầu → đuôi)',-1,.95,.01],['headK','Cỡ đầu',.1,3,.01],['tailK','Cỡ đuôi',.1,3,.01],['headCurl','Độ cuộn đầu (Rồng bay)',0,1.5,.01],['aspect','Tỉ lệ dẹt',.12,1.6,.01],['thick','Độ dày',0,.08,.001],['stack','Xếp tầng (lệch chiều sâu)',0,2,.01],['gap','Khoảng hở tối thiểu',0,.2,.005]],
   'g-fold':[['fan','Xoè (nghiêng tăng dần)',-120,120,1],['lean','Nghiêng chung',-90,90,1],['pleat','Nếp gấp',0,80,1],['pleatFreq','Số nếp trên khung',.5,30,.5],['twist','Xoắn (vòng)',-6,6,.05],['bunch','Dồn lớp (accordion)',0,.95,.01],['foldK','Gập khi bị dồn',0,1.5,.01]],
   'g-look':[['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
 };
@@ -1021,8 +1024,9 @@ function snap(){
 const stamp=()=>new Date().toISOString().slice(0,19).replace(/[-:T]/g,'');
 function download(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove();}
 function exportPNG(){
-  render(0); // draw now so the buffer is still valid when we read it
-  cv.toBlob(b=>{ if(!b) return toast('Không xuất được PNG'); const u=URL.createObjectURL(b); download(u,`disc-spine-${activePreset}-${stamp()}.png`); setTimeout(()=>URL.revokeObjectURL(u),4000); toast('Đã lưu PNG'); },'image/png');
+  hiRes=true; resize(); render(0); // draw now so the buffer is still valid when we read it
+  cv.toBlob(b=>{ if(!b) return toast('Không xuất được PNG'); const u=URL.createObjectURL(b); download(u,`disc-spine-${activePreset}-${stamp()}.png`); setTimeout(()=>URL.revokeObjectURL(u),4000); toast(`Đã lưu PNG ${cv.width}×${cv.height}`); },'image/png');
+  hiRes=false; resize();
 }
 // records the live canvas; MP4 (H.264) where the browser can encode it, WebM otherwise
 let rec=null, recChunks=[], recTimer=0;
@@ -1033,12 +1037,13 @@ function toggleRecord(){
   const types=['video/mp4;codecs=avc1.640033','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
   const type=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
   const ext=type.startsWith('video/mp4')?'mp4':'webm';
+  hiRes=true; resize();
   const stream=cv.captureStream(60);
-  try{ rec=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:16e6}); }catch(_){ return toast('Không quay được video'); }
+  try{ rec=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:28e6}); }catch(_){ hiRes=false; resize(); return toast('Không quay được video'); }
   recChunks=[];
   rec.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
   rec.onstop=()=>{
-    clearInterval(recTimer); stream.getTracks().forEach(t=>t.stop());
+    clearInterval(recTimer); stream.getTracks().forEach(t=>t.stop()); hiRes=false; resize();
     const u=URL.createObjectURL(new Blob(recChunks,{type:type||'video/webm'}));
     download(u,`disc-spine-${activePreset}-${stamp()}.${ext}`); setTimeout(()=>URL.revokeObjectURL(u),10000);
     rec=null; btn.classList.remove('rec'); btn.textContent='Export MP4';
