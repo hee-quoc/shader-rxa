@@ -164,7 +164,17 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
   </aside>
 </div>
 
-<script src="vendor/three.min.js"></script>
+<script>
+// startup problems are shown on the stage instead of leaving a blank frame
+window.discFail=function(msg){
+  var st=document.getElementById('stage'); if(!st||document.getElementById('failMsg')) return;
+  var d=document.createElement('div'); d.id='failMsg'; d.setAttribute('role','alert');
+  d.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center;z-index:5;font-size:14px;line-height:1.6;color:var(--fg)';
+  d.innerHTML='<div style="max-width:460px"></div>'; d.firstChild.textContent=msg; st.appendChild(d);
+};
+window.addEventListener('error',function(e){ window.discFail('App gặp lỗi khi khởi động: '+(e.message||e)+'. Thử tải lại trang (Cmd + Shift + R). Nếu vẫn lỗi, chụp lại dòng này gửi cho mình.'); });
+</script>
+<script src="vendor/three.min.js" onerror="discFail('Không tải được thư viện 3D (vendor/three.min.js). Kiểm tra mạng hoặc tắt extension chặn script rồi tải lại trang.')"></script>
 <script>
 (function(){
 const TAU=Math.PI*2, DEG=Math.PI/180;
@@ -217,7 +227,10 @@ let S=Object.assign({},DEF,PRESETS[0].set), activePreset='rongvay';
 
 /* ---------- renderer ---------- */
 const cv=document.getElementById('cv');
-const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true}); }
+catch(e){ discFail('Trình duyệt không bật được WebGL nên không vẽ được hình. Trên Chrome: vào Settings → System, bật "Use graphics acceleration when available", rồi khởi động lại Chrome. Nếu đang mở nhiều tab 3D, đóng bớt rồi tải lại trang.'); throw e; }
+cv.addEventListener('webglcontextlost',e=>{ e.preventDefault(); discFail('Card đồ hoạ vừa bị ngắt (WebGL context lost). Tải lại trang để chạy tiếp.'); });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.autoClear=false;
 renderer.outputEncoding=THREE.sRGBEncoding;
