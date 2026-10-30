@@ -147,6 +147,7 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
         <div class="actions"><button class="btn" id="revStops">Đảo thứ tự</button><button class="btn" id="saveMine">Lưu palette này</button></div>
       </div>
       <div class="seg" id="mats"></div>
+      <div class="seg" id="cmodes" aria-label="Kiểu đi màu"></div>
       <div id="g-look" class="body" style="padding:0"></div>
       <div class="tog"><label for="t-cauto">Tự chạy màu 0 → 1 (loop)</label><input type="checkbox" id="t-cauto"></div>
     </div></details>
@@ -207,10 +208,10 @@ const PALETTES={
 /* ---------- state ---------- */
 const DEF={
   mode:'A',speed:0.6,amp:1,flow:0.5,
-  skel:'column',closed:true,seed:7,spine:false,upClosed:false,upDepth:0.8,upFreq:1,upDepthK:1,
+  skel:'column',closed:true,seed:7,spine:false,upClosed:false,upDepth:0.8,upFreq:1,upDepthK:1,upCurveZ:0.6,upSmooth:0.3,
   shape:'disc',count:7,size:2.55,taper:0.08,headK:1,tailK:1,headCurl:1,spawnK:0,growL:0.07,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
   fan:82,lean:2,pleat:0,pleatFreq:3,twist:0,bunch:0,foldK:0,
-  pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
+  pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorMode:'holo3d',env:0.8,flowA:1,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
   ratio:'3:4',
   camTheta:0,camPhi:4,zoom:1,fov:28,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0,autoRot:false
 };
@@ -315,20 +316,22 @@ const U={uC0:{value:new THREE.Color()},uC1:{value:new THREE.Color()},uC2:{value:
   uStripe:{value:0},uSplit:{value:0},uGradAxis:{value:0},uCyclic:{value:0},
   uS0:{value:new THREE.Color()},uS1:{value:new THREE.Color()},uS2:{value:new THREE.Color()},uS3:{value:new THREE.Color()},uS4:{value:new THREE.Color()},uS5:{value:new THREE.Color()},
   uRimC:{value:new THREE.Color()},uLightL:{value:new THREE.Vector3(0,1,0)},uBulge:{value:1},uShade:{value:.9},uHalo:{value:0},uHaloW:{value:1},uRimW:{value:0},uDither:{value:0.1},uShift:{value:0},
-  uNb:{value:null},uCount:{value:1},uShape:{value:0},uCamL:{value:new THREE.Vector3()},uOutline:{value:0},uGrad:{value:0.3},uFlat:{value:0},uGlass:{value:0},uPaper:{value:0}};
+  uNb:{value:null},uCount:{value:1},uShape:{value:0},uCamL:{value:new THREE.Vector3()},uOutline:{value:0},uGrad:{value:0.3},uFlat:{value:0},uGlass:{value:0},uPaper:{value:0},
+  uMode:{value:0},uEnv:{value:.8},uFlowA:{value:1},uTime:{value:0},uUpL:{value:new THREE.Vector3(0,1,0)}};
 const mat=new THREE.MeshStandardMaterial({roughness:0.82,metalness:0,side:THREE.DoubleSide});
 mat.onBeforeCompile=sh=>{
   Object.assign(sh.uniforms,U);
   sh.vertexShader=`attribute float aEdge; attribute float aSide; attribute float aT; attribute float aIdx; attribute float aVis;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC;
 `+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   vL=position.xy; vEdge=aEdge; vSide=aSide; vT=aT; vIdx=aIdx; vVis=aVis;
   vWN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
   vLP = (instanceMatrix * vec4(transformed,1.0)).xyz;
-  vAX = mat3(instanceMatrix)[0]; vAY = mat3(instanceMatrix)[1]; vAZ = mat3(instanceMatrix)[2];`);
+  vAX = mat3(instanceMatrix)[0]; vAY = mat3(instanceMatrix)[1]; vAZ = mat3(instanceMatrix)[2]; vC = instanceMatrix[3].xyz;`);
   sh.fragmentShader=`uniform vec3 uC0,uC1,uC2,uC3,uLine,uRim,uHi,uDeep;
 uniform float uStripe,uSplit,uOutline,uGrad,uFlat,uGlass,uPaper,uGradAxis,uCyclic;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC;
+uniform float uMode,uEnv,uFlowA,uTime; uniform vec3 uUpL;
 uniform vec3 uS0,uS1,uS2,uS3,uS4,uS5,uRimC,uCamL,uLightL;
 uniform float uBulge,uShade;
 uniform float uHalo,uHaloW,uRimW,uDither,uShift,uCount,uShape;
@@ -375,7 +378,7 @@ float coneT(vec2 p, vec2 F){
   float sFar=-b+sqrt(max(disc,0.));
   return clamp(dist/max(sFar,1e-4),0.,1.);
 }
-vec3 haloColor(){
+vec3 haloClassic(){
   float n1=hh(gl_FragCoord.xy)-.5, n2=hh(gl_FragCoord.yx+17.3)-.5;
   // 1) where this layer sits on the spine; colour flow moves 0 -> 1 and wraps
   float s=vT*(uCyclic>.5?1.:5./6.)+uShift;
@@ -399,6 +402,51 @@ vec3 haloColor(){
   float d=haloDist();
   float sh=1.-smoothstep(0., uHaloW, d + n1*uDither*uHaloW*.6); sh*=sh;
   c=mix(c, rampC(s+.33)*.84, clamp(sh*uGrad,0.,1.));
+  return c;
+}
+// smooth cyclic ramp: Catmull-Rom through the 6 stops, so there is no visible kink where one stop hands over to the next
+vec3 stopC(float i){ i=mod(i,6.); return i<.5?uS0:i<1.5?uS1:i<2.5?uS2:i<3.5?uS3:i<4.5?uS4:uS5; }
+vec3 rampS(float x){ x=fract(x)*6.; float i=floor(x), f=x-i;
+  vec3 p0=stopC(i-1.),p1=stopC(i),p2=stopC(i+1.),p3=stopC(i+2.);
+  vec3 c=.5*(2.*p1+(p2-p0)*f+(2.*p0-5.*p1+4.*p2-p3)*f*f+(3.*p1-p0-3.*p2+p3)*f*f*f);
+  return clamp(c,min(p1,p2)-.04,max(p1,p2)+.04); }
+vec3 haloColor(){
+  if(uMode>2.5) return haloClassic();
+  float n1=hh(gl_FragCoord.xy)-.5, n2=hh(gl_FragCoord.yx+17.3)-.5;
+  float s=vT*(uCyclic>.5?1.:5./6.)+uShift;
+  vec3 Z=normalize(vAZ), X=normalize(vAX), Y=normalize(vAY);
+  // one light for the whole body, mostly from above (world up) plus a little of the key light
+  vec3 U=normalize(uUpL+.35*normalize(uLightL));
+  // in-disc gradient points along the light projected onto the disc: neighbours agree, so folds don't flip colour
+  vec2 ld=vec2(dot(U,X),dot(U,Y)); ld=length(ld)>1e-3?normalize(ld):vec2(0.,1.);
+  float r=clamp(vEdge,0.,1.); vec2 l=vL*(r/max(length(vL),1e-4));
+  vec2 F=-ld*uBulge; float t0=(uBulge-1.)/(uBulge+1.);
+  float tt=clamp((coneT(l,F)-t0)/(1.-t0)+n1*uDither*.5,0.,1.);
+  // environment light from world-space geometry: height of this point inside its disc + which way the visible face looks
+  float hgt=clamp(dot(vLP-vC,U)/max(length(vAX),1e-4),-1.,1.);
+  float face=dot(Z*sign(dot(Z,uCamL-vLP)+1e-6),U);
+  float lit=smoothstep(0.,1.,clamp(.5+.5*(.9*hgt+.5*face)+n2*uDither*.15,0.,1.));
+  vec3 c;
+  if(uMode<.5){            // Holo 3D: hue drifts a little with the light, like foil
+    c=rampS(s+uShade*((lit-.5)*.3+(tt-.5)*.22));
+  } else if(uMode<1.5){    // Sóng chảy: the "Scales & Plume" flow, the gradient ripples outward, rim stays crisp
+    float seed=vIdx*.77, keep=1.-smoothstep(.86,1.,tt);
+    float w=sin(tt*18.-uTime*2.4+seed)*.5+sin(tt*7.-uTime*1.3+seed*2.)*.5;
+    c=ramp6(clamp(tt+uFlowA*.07*w*keep,0.,1.)*.85+fract(uShift)*.15);
+  } else {                 // Đơn sắc blend: shade / base / tint of one colour, ping-pong wave (no wrap seam)
+    vec3 base=rampS(s), shade=base*.42, tint=mix(base,vec3(1.),.45);
+    float m=.5+.5*sin((tt*1.4+vT*2.5)*3.-uTime*2.);
+    c=mix(mix(shade,base,smoothstep(0.,.5,m)),tint,smoothstep(.5,1.,m));
+  }
+  // environment: belly falls toward the deep colour, back lifts toward the highlight
+  vec3 dark=mix(c,uDeep,.45)*.5, lite=mix(c,uHi,.45);
+  c=mix(c, mix(dark,lite,lit), uEnv);
+  // soft rim glow on the lit edge only (no hue jump)
+  if(uRimW>0.) c=mix(c, uRimC, smoothstep(uRimW,0.,1.-tt)*lit*.55);
+  // shadow from the layer in front: same hue, just darker, so creases read as shading
+  float d=haloDist();
+  float sh=1.-smoothstep(0., uHaloW, d + n1*uDither*uHaloW*.6); sh*=sh;
+  c=mix(c, c*.45+uDeep*.06, clamp(sh*uGrad*1.25,0.,1.));
   return c;
 }
 vec3 ramp(float t){ t=clamp(t,0.,1.); if(uCyclic>.5) t=1.-abs(2.*t-1.); t*=3.; if(t<1.) return mix(uC0,uC1,t); if(t<2.) return mix(uC1,uC2,t-1.); return mix(uC2,uC3,t-2.); }
@@ -512,16 +560,29 @@ function parseSVG(text){
   host.innerHTML=src.innerHTML; document.body.appendChild(host);
   try{
     const els=[...host.querySelectorAll('path,polyline,polygon,line,circle,ellipse,rect')].filter(e=>!e.closest('defs,clipPath,mask,symbol'));
-    let best=null,bestL=0;
-    els.forEach(e=>{ let L=0; try{L=e.getTotalLength();}catch(_){} if(L>bestL){bestL=L;best=e;} });
-    if(!best||bestL<=0) throw new Error('Không tìm thấy path nào trong SVG.');
-    const m=best.getCTM(), N=Math.min(600,Math.max(80,Math.round(bestL/2))), pts=[];
-    for(let i=0;i<=N;i++){ let q=best.getPointAtLength(bestL*i/N); if(m) q=q.matrixTransform(m); pts.push([q.x,-q.y,0]); }
-    const tag=best.tagName.toLowerCase(), d=best.getAttribute('d')||'';
-    const a=pts[0],b=pts[pts.length-1], closeGap=Math.hypot(a[0]-b[0],a[1]-b[1]);
-    const closed=['polygon','circle','ellipse','rect'].includes(tag)||/[zZ]\s*$/.test(d.trim())||closeGap<bestL*0.01;
+    // sample every element finely; a jump between samples marks a new sub-path (e.g. the "2" and the "6" of "26")
+    let pieces=[], total=0;
+    els.forEach(e=>{ let L=0; try{L=e.getTotalLength();}catch(_){} if(!(L>0)) return;
+      const m=e.getCTM(), N=Math.min(1500,Math.max(60,Math.round(L/1.5))), step=L/N; let cur=[];
+      for(let i=0;i<=N;i++){ let q=e.getPointAtLength(L*i/N); if(m) q=q.matrixTransform(m);
+        const pt=[q.x,-q.y,0], pr=cur[cur.length-1];
+        if(pr&&Math.hypot(pt[0]-pr[0],pt[1]-pr[1])>step*6){ pieces.push(cur); cur=[]; }
+        cur.push(pt); }
+      pieces.push(cur); total+=L; });
+    const plen=c=>{let l=0;for(let i=1;i<c.length;i++) l+=Math.hypot(c[i][0]-c[i-1][0],c[i][1]-c[i-1][1]);return l;};
+    pieces=pieces.filter(c=>c.length>1); if(!pieces.length) throw new Error('Không tìm thấy path nào trong SVG.');
+    const maxL=Math.max(...pieces.map(plen)); pieces=pieces.filter(c=>plen(c)>maxL*0.08); // drop dots / specks
+    // reading order: left to right by the piece's centre, each piece starting at the end nearer the previous one
+    pieces.sort((a,b)=>a.reduce((s,p)=>s+p[0],0)/a.length-b.reduce((s,p)=>s+p[0],0)/b.length);
+    const pts=[];
+    pieces.forEach(c=>{ const last=pts[pts.length-1];
+      if(last&&Math.hypot(c[c.length-1][0]-last[0],c[c.length-1][1]-last[1])<Math.hypot(c[0][0]-last[0],c[0][1]-last[1])) c=c.slice().reverse();
+      pts.push(...c); });
+    const one=els.length===1&&pieces.length===1, tag=els[0].tagName.toLowerCase(), d=els[0].getAttribute('d')||'';
+    const a=pts[0],b=pts[pts.length-1];
+    const closed=one&&(['polygon','circle','ellipse','rect'].includes(tag)||/[zZ]\s*$/.test(d.trim())||Math.hypot(a[0]-b[0],a[1]-b[1])<total*0.01);
     if(closed) pts.pop();
-    return {pts,closed,keepZ:false,label:`SVG · <${tag}> · ${Math.round(bestL)} px`};
+    return {pts,closed,keepZ:false,label:`SVG · ${pieces.length} nét · ${Math.round(total)} px`};
   } finally { host.remove(); }
 }
 function parseJSON(text){
@@ -537,23 +598,50 @@ function loadSkeletonFile(file){
     const isJSON=/\.json$/i.test(file.name)||text.trim()[0]==='['||text.trim()[0]==='{';
     const r=isJSON?parseJSON(text):parseSVG(text);
     const vs=normalizePts(r.pts,r.keepZ);
-    upPts=resample(vs,r.closed,140); S.upClosed=r.closed; S.skel='upload';
+    upPts=resample(vs,r.closed,UPN); S.upClosed=r.closed; S.skel='upload';
     targetInit=false; syncUI();
     info.textContent=`Đã nạp ${file.name} (${r.label}, ${r.closed?'khép kín':'hở'}).`;
   }).catch(e=>{ info.textContent='Không đọc được file: '+(e.message||e)+' Thử file SVG có <path> hoặc JSON mảng điểm.'; });
 }
+const UPN=260;
+// Gaussian-smooth the uploaded path (kills kinks where strokes meet, e.g. the tail of a "6" joining its loop)
+let _smKey='', _smPts=null;
+function smoothUpload(){
+  const key=S.upSmooth+'|'+S.upClosed+'|'+upPts.length+'|'+upPts[0].x+'|'+upPts[upPts.length-1].y;
+  if(key===_smKey) return _smPts; _smKey=key;
+  const n=upPts.length, r=Math.round(S.upSmooth*18), sig=Math.max(r/2,1e-3);
+  if(r<1){ _smPts=upPts; return _smPts; }
+  const w=[]; for(let k=-r;k<=r;k++) w.push(Math.exp(-k*k/(2*sig*sig)));
+  _smPts=upPts.map((_,i)=>{ const o=new THREE.Vector3(); let ws=0;
+    for(let k=-r;k<=r;k++){ let j=i+k; if(S.upClosed) j=(j+n)%n; else if(j<0||j>=n) continue; o.addScaledVector(upPts[j],w[k+r]); ws+=w[k+r]; }
+    return o.multiplyScalar(1/ws); });
+  if(!S.upClosed){ _smPts[0]=upPts[0].clone(); _smPts[n-1]=upPts[n-1].clone(); }
+  return _smPts;
+}
+// Z from how much the path has turned: every full loop in the drawing rises by one unit, so loops become
+// a gentle helix instead of overlapping themselves flat (centred so the shape stays balanced)
+function upTurnZ(pts){
+  const n=pts.length, z=new Float32Array(n); let a=0;
+  for(let i=1;i<n-1;i++){
+    const ax=pts[i].x-pts[i-1].x, ay=pts[i].y-pts[i-1].y, bx=pts[i+1].x-pts[i].x, by=pts[i+1].y-pts[i].y;
+    a+=Math.atan2(ax*by-ay*bx, ax*bx+ay*by); z[i]=Math.abs(a)/TAU;
+  }
+  z[n-1]=z[n-2]||0; let mean=0; for(let i=0;i<n;i++) mean+=z[i]; mean/=n;
+  for(let i=0;i<n;i++) z[i]-=mean;
+  return z;
+}
 function prepUpload(ph){
   if(S.skel!=='upload') return;
   if(!upPts){ // placeholder until a file is loaded: a gentle S-curve
-    upPts=resample([[-4,-2,0],[-1.5,1.5,0],[1.5,-1.5,0],[4,2,0]].map(p=>new THREE.Vector3(...p)),false,140);
+    upPts=resample([[-4,-2,0],[-1.5,1.5,0],[1.5,-1.5,0],[4,2,0]].map(p=>new THREE.Vector3(...p)),false,UPN);
   }
-  const n=upPts.length; _up.length=0;
+  const n=upPts.length, sp=smoothUpload(), tz=upTurnZ(sp); _up.length=0;
   for(let i=0;i<n;i++){
-    const p=upPts[i], s=i/n, w=0.22*S.amp;
+    const p=sp[i], s=i/n, w=0.22*S.amp;
     _up.push(new THREE.Vector3(
       p.x+w*Math.sin(ph+TAU*s*2),
       p.y+w*Math.cos(ph*1.3+TAU*s*3),
-      p.z*S.upDepthK+S.upDepth*Math.sin(TAU*s*S.upFreq+ph*0.5)));
+      p.z*S.upDepthK+S.upDepth*Math.sin(TAU*s*S.upFreq+ph*0.5)+S.upCurveZ*tz[i]));
   }
   _upCurve=new THREE.CatmullRomCurve3(_up,S.upClosed,'centripetal');
 }
@@ -795,6 +883,7 @@ function resize(){
 new ResizeObserver(resize).observe(stage);
 
 /* ---------- look ---------- */
+const CMODES={holo3d:'Holo 3D',flow:'Sóng chảy',mono:'Đơn sắc blend',classic:'Cổ điển'};
 const MATS={halo:'Gradient Halo',flat:'Poster phẳng',soft:'Soft 3D',paper:'Giấy dày'};
 function applyLook(){
   const p=PALETTES[S.pal];
@@ -805,6 +894,7 @@ function applyLook(){
   const st=p.stops||[p.hi,p.c[3],p.c[2],p.c[1],p.c[0],p.deep];
   [U.uS0,U.uS1,U.uS2,U.uS3,U.uS4,U.uS5].forEach((u,i)=>u.value.copy(lin(st[i])));
   U.uRimC.value.copy(lin(p.rimC||p.rim));
+  U.uMode.value=Object.keys(CMODES).indexOf(S.colorMode); U.uEnv.value=S.env; U.uFlowA.value=S.flowA;
   U.uHalo.value=S.mat==='halo'?1:0; U.uHaloW.value=S.halo*S.size; U.uRimW.value=S.rimW; U.uDither.value=S.dither;
   U.uFlat.value=(S.mat==='flat'||S.mat==='halo')?1:0; U.uGlass.value=S.mat==='glass'?1:0; U.uPaper.value=S.mat==='paper'?1:0;
   const glass=S.mat==='glass';
@@ -843,7 +933,8 @@ function render(dt){
     U.uLightL.value.copy(lw).transformDirection(_inv);
   }
   U.uBulge.value=S.bulge; U.uShade.value=S.shade;
-  U.uShift.value=S.colorPhase;
+  U.uShift.value=S.colorPhase; U.uTime.value=time;
+  U.uUpL.value.set(0,1,0).transformDirection(_inv);
   grainMat.uniforms.uTime.value=time;
   renderer.clear(); renderer.render(bgScene,orthoCam); renderer.clearDepth(); renderer.render(scene,camera); renderer.render(grainScene,orthoCam);
 }
@@ -861,10 +952,10 @@ const SLIDERS={
            ['panX','Dời X',-10,10,.05],['panY','Dời Y',-10,10,.05],['panZ','Dời Z',-10,10,.05],
            ['rotX','Xoay vật thể X',-180,180,1],['rotY','Xoay vật thể Y',-180,180,1],['rotZ','Xoay vật thể Z',-180,180,1]],
   'g-skel':[],
-  'g-up':[['upDepth','Độ sâu Z (khung upload)',0,4,.01],['upFreq','Số sóng Z',0,6,.1]],
+  'g-up':[['upCurveZ','Z theo độ cong (mỗi vòng nâng lên)',0,4,.01],['upDepth','Z sóng đều',0,4,.01],['upFreq','Số sóng Z',0,6,.1],['upDepthK','Giữ Z gốc (file JSON)',0,2,.01],['upSmooth','Làm mượt khung',0,1,.01]],
   'g-layer':[['count','Số lớp',3,400,1],['size','Kích thước',.2,3,.01],['taper','Thon dần (đầu → đuôi)',-1,.95,.01],['headK','Cỡ đầu',.1,3,.01],['tailK','Cỡ đuôi',.1,3,.01],['headCurl','Độ cuộn đầu (Rồng bay)',0,1.5,.01],['spawnK','Cỡ shape mới ở đầu',0,1,.01],['growL','Độ dài đoạn mọc ra',.02,.5,.01],['aspect','Tỉ lệ dẹt',.12,1.6,.01],['thick','Độ dày',0,.08,.001],['stack','Xếp tầng (lệch chiều sâu)',0,2,.01],['gap','Khoảng hở tối thiểu',0,.2,.005]],
   'g-fold':[['fan','Xoè (nghiêng tăng dần)',-120,120,1],['lean','Nghiêng chung',-90,90,1],['pleat','Nếp gấp',0,80,1],['pleatFreq','Số nếp trên khung',.5,30,.5],['twist','Xoắn (vòng)',-6,6,.05],['bunch','Dồn lớp (accordion)',0,.95,.01],['foldK','Gập khi bị dồn',0,1.5,.01]],
-  'g-look':[['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
+  'g-look':[['env','Ánh sáng môi trường (bụng tối, lưng sáng)',0,1,.01],['flowA','Độ gợn sóng màu (kiểu Sóng chảy)',0,3,.01],['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
 };
 const DEGK=['fan','lean','pleat','camTheta','camPhi','fov','rotX','rotY','rotZ'];
 const fmt=(k,v)=>k==='colorPhase'?(+v).toFixed(3):k==='colorDur'?(+v).toFixed(1)+'s':k==='zoom'?(+v).toFixed(2)+'×':k==='count'?String(v|0):DEGK.includes(k)?Math.round(v)+'°':k==='thick'||k==='gap'?(+v).toFixed(3):(+v).toFixed(2);
@@ -899,6 +990,7 @@ function buildUI(){
   segGroup('skels',Object.keys(SKELS).map(k=>[k,SKELS[k].name]),'skel',()=>{targetInit=false;});
   segGroup('shapes',[['disc','Tròn'],['tile','Phiến']],'shape');
   segGroup('mats',Object.keys(MATS).map(k=>[k,MATS[k]]),'mat',applyLook);
+  segGroup('cmodes',Object.keys(CMODES).map(k=>[k,CMODES[k]]),'colorMode',applyLook);
   segGroup('ratios',Object.keys(RATIOS).map(k=>[k,k]),'ratio',resize);
   const pals=$('pals');
   Object.keys(PALETTES).forEach(k=>{const p=PALETTES[k];const b=document.createElement('button');b.className='pal';b.dataset.v=k;
@@ -917,7 +1009,7 @@ function buildUI(){
   $('t-cauto').addEventListener('change',e=>{S.colorAuto=e.target.checked;});
   $('t-auto').addEventListener('change',e=>{S.autoRot=e.target.checked;});
   $('skelFile').addEventListener('change',e=>{const f=e.target.files[0]; if(f) loadSkeletonFile(f); e.target.value='';});
-  $('t-upclosed').addEventListener('change',e=>{S.upClosed=e.target.checked; if(upPts) upPts=resample(upPts,S.upClosed,140); targetInit=false;});
+  $('t-upclosed').addEventListener('change',e=>{S.upClosed=e.target.checked; if(upPts) upPts=resample(upPts,S.upClosed,UPN); targetInit=false;});
   const st=$('stage');
   st.addEventListener('dragover',e=>{e.preventDefault();st.classList.add('drag');});
   st.addEventListener('dragleave',()=>st.classList.remove('drag'));
@@ -964,7 +1056,7 @@ function syncEditor(){
 }
 function syncUI(){
   const press=(sel,val)=>document.querySelectorAll(sel).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===val||b.dataset.mode===val)));
-  press('#skels button',S.skel);press('#shapes button',S.shape);press('#mats button',S.mat);press('#ratios button',S.ratio);
+  press('#skels button',S.skel);press('#shapes button',S.shape);press('#mats button',S.mat);press('#cmodes button',S.colorMode);press('#ratios button',S.ratio);
   syncEditor(); press('#pals .pal',S.pal);press('#presets .preset',activePreset);
   for(const g in SLIDERS) SLIDERS[g].forEach(([k])=>{$('s-'+k).value=S[k];$('v-'+k).textContent=fmt(k,S[k]);});
   $('t-spine').checked=S.spine;$('t-avoid').checked=S.avoid;$('t-cauto').checked=S.colorAuto;$('t-auto').checked=S.autoRot;
@@ -1032,7 +1124,7 @@ function pasteDialog(){
 function loadPreset(id){
   const u=SAVED.find(x=>x.id===id); if(u){ applySettings(u.set); activePreset=id; syncUI(); return; }
   const p=PRESETS.find(x=>x.id===id); activePreset=id;
-  const keep={spine:S.spine,seed:S.seed,closed:S.closed,avoid:S.avoid,autoRot:S.autoRot,upClosed:S.upClosed,upDepth:S.upDepth,upFreq:S.upFreq};
+  const keep={spine:S.spine,seed:S.seed,closed:S.closed,avoid:S.avoid,autoRot:S.autoRot,upClosed:S.upClosed,upDepth:S.upDepth,upFreq:S.upFreq,upCurveZ:S.upCurveZ,upSmooth:S.upSmooth,upDepthK:S.upDepthK};
   S=Object.assign({},DEF,p.set,keep); targetInit=false; applyLook(); syncUI();
 }
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}
