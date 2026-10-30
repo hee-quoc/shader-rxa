@@ -228,8 +228,12 @@ let S=Object.assign({},DEF,PRESETS[0].set), activePreset='rongvay';
 /* ---------- renderer ---------- */
 const cv=document.getElementById('cv');
 let renderer;
-try{ renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true}); }
-catch(e){ discFail('Trình duyệt không bật được WebGL nên không vẽ được hình. Trên Chrome: vào Settings → System, bật "Use graphics acceleration when available", rồi khởi động lại Chrome. Nếu đang mở nhiều tab 3D, đóng bớt rồi tải lại trang.'); throw e; }
+// try lighter context settings before giving up (some GPUs / blocklisted drivers refuse antialias or high-performance)
+for(const o of [{antialias:true},{antialias:false},{antialias:false,powerPreference:'low-power',failIfMajorPerformanceCaveat:false}]){
+  try{ renderer=new THREE.WebGLRenderer(Object.assign({canvas:cv},o)); break; }catch(_){}
+}
+try{ if(!renderer) throw new Error('WebGL unavailable'); }
+catch(e){ discFail('Trình duyệt không bật được WebGL nên không vẽ được hình. Thử: (1) thoát hẳn Chrome bằng Cmd + Q rồi mở lại; (2) Settings → System → bật "Use graphics acceleration when available"; (3) đóng bớt tab nặng. Mở chrome://gpu để xem WebGL có đang bị tắt không.'); throw e; }
 cv.addEventListener('webglcontextlost',e=>{ e.preventDefault(); discFail('Card đồ hoạ vừa bị ngắt (WebGL context lost). Tải lại trang để chạy tiếp.'); });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.autoClear=false;
