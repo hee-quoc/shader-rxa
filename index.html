@@ -202,6 +202,7 @@ const PALETTES={
   rxVanHoa:{name:'RX Văn Hoá',bg:['#ffffff','#ececf0'],stops:['#dcb8f9','#d9cbf8','#d5e3f8','#a1b0f1','#5c67e6','#2a2fd8'],c:['#2a2fd8','#5c67e6','#d5e3f8','#dcb8f9'],line:'#2a2fd8',rim:'#dcb8f9',hi:'#dcb8f9',deep:'#2a2fd8'},
   rxCongNghe:{name:'RX Công Nghệ',bg:['#ffffff','#ececf0'],stops:['#86fcc8','#80f0c6','#6fd0c8','#58a6cc','#4479d2','#2f55d8'],c:['#2f55d8','#4479d2','#6fd0c8','#86fcc8'],line:'#2f55d8',rim:'#86fcc8',hi:'#86fcc8',deep:'#2f55d8'},
   rxSteam:{name:'RX STEAM',bg:['#ffffff','#ececf0'],stops:['#d4ff6c','#cbf56f','#98bb84','#5a6fa0','#2f3dc4','#1a1edc'],c:['#1a1edc','#2f3dc4','#98bb84','#d4ff6c'],line:'#1a1edc',rim:'#d4ff6c',hi:'#d4ff6c',deep:'#1a1edc'},
+  thermal:{name:'Thermal',bg:['#ececea','#ececea'],stops:['#fff04f','#ff8a26','#ff3387','#ff1fb8','#40f259','#33f2d9'],c:['#ff8a26','#ff1fb8','#40f259','#33f2d9'],line:'#ff1fb8',rim:'#73bfff',rimC:'#73bfff',hi:'#73bfff',deep:'#ff1fb8'},
   chainCam:{name:'Chain Cam',bg:['#C3C3C3','#b4b4b4'],keys:[['#FF5414',0],['#D2160E',.06],['#5C0012',.12],['#A8060E',.19],['#F2400E',.25],['#FF5A1A',.32],['#FF5A1A',.41],['#F28CB4',.49],['#ACA8EE',.57],['#EE8EC2',.67],['#FF5A14',.74],['#F7A2C2',.85]],
     stops:['#FF5414','#5C0012','#F2400E','#F28CB4','#ACA8EE','#F7A2C2'],c:['#5C0012','#D2160E','#FF5414','#F28CB4'],line:'#5C0012',rim:'#F7A2C2',hi:'#F7A2C2',deep:'#5C0012'},
   chainLam:{name:'Chain Lam',bg:['#C3C3C3','#b4b4b4'],keys:[['#1A40DA',0],['#2448DC',.05],['#6E86D8',.09],['#D2CCB8',.13],['#CFCAB8',.30],['#2E50DE',.60],['#A9AEDB',.71],['#1638D6',.78]],
@@ -229,7 +230,7 @@ const PRESETS=[
   {id:'quat',name:'Quạt',note:'Điểm Đến',set:{mode:'B',speed:0.5,amp:0.3,flow:0.35,skel:'fan',shape:'disc',count:8,size:3.1,taper:-0.1,aspect:0.5,thick:0,stack:0.8,fan:0,lean:90,pleat:0,twist:0,bunch:0.15,foldK:0,pal:'rxDiemDen',mat:'halo',outline:0,grad:0.6,halo:1.4,dither:0.07,grain:0.06,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'3:4',camTheta:0,camPhi:0,zoom:1.45}},
   {id:'vay',name:'Vảy',note:'STEAM',set:{mode:'B',speed:0.5,amp:0.3,flow:0.3,skel:'rows',shape:'disc',count:30,size:1.35,taper:0,aspect:1,thick:0,stack:0.6,fan:0,lean:90,pleat:0,twist:0,bunch:0,foldK:0,pal:'rxSteam',mat:'halo',outline:0,grad:0.55,halo:0.75,dither:0.07,grain:0.05,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'3:4',camTheta:0,camPhi:0,zoom:1.3}},
   {id:'xich',name:'Xích Chroma',note:'Chroma Chain',set:{mode:'B',speed:0.5,amp:0.35,flow:0.25,skel:'ring',shape:'disc',count:150,size:0.75,taper:0,aspect:1,thick:0,stack:0,fan:0,lean:0,pleat:0,twist:0,bunch:0.05,foldK:0,pal:'chainCam',mat:'halo',colorMode:'chroma',outline:0,grain:0.02,dither:0.05,ratio:'4:3',camTheta:-10,camPhi:28,zoom:1.15}},
-  {id:'nhiet',name:'Rồng Nhiệt',note:'Thermal Bloom',set:{mode:'B',speed:0.5,amp:1,flow:0.35,skel:'dragon',shape:'disc',count:52,size:1.25,taper:0.8,aspect:1,thick:0.02,fan:0,lean:10,pleat:16,pleatFreq:5,twist:0.25,bunch:0.12,foldK:0.25,pal:'rxDiSan',mat:'halo',colorMode:'thermal',outline:0,tBlur:0,tShift:0,tContrast:1.15,tFringe:2,grain:0.04,ratio:'3:4',camTheta:-28,camPhi:-16,zoom:1.45}},
+  {id:'nhiet',name:'Rồng Nhiệt',note:'Thermal Bloom',set:{mode:'B',speed:0.5,amp:1,flow:0.35,skel:'dragon',shape:'disc',count:52,size:1.25,taper:0.8,aspect:1,thick:0.02,fan:0,lean:10,pleat:16,pleatFreq:5,twist:0.25,bunch:0.12,foldK:0.25,pal:'thermal',mat:'halo',colorMode:'thermal',outline:0,tBlur:0,tShift:0,tContrast:1.15,tFringe:2,grain:0.04,ratio:'3:4',camTheta:-28,camPhi:-16,zoom:1.45}},
   {id:'vong',name:'Vòng Holo',note:'Impact',set:{mode:'B',speed:0.45,amp:0.5,flow:0.4,skel:'ring',shape:'tile',count:46,size:0.9,taper:0,aspect:1,thick:0.02,stack:0,fan:0,lean:28,pleat:0,twist:0,bunch:0.1,foldK:0.2,pal:'rxImpact',mat:'halo',outline:0,grad:0.55,halo:1.2,dither:0.07,grain:0.03,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'4:3',camTheta:-20,camPhi:22,zoom:1.05}}
 ];
 let S=Object.assign({},DEF,PRESETS[0].set), activePreset='rongvay';
@@ -421,7 +422,13 @@ const heatRT=new THREE.WebGLRenderTarget(2,2,{minFilter:THREE.LinearFilter,magFi
 const thermalMat=new THREE.ShaderMaterial({
   uniforms:{uHeat:{value:heatRT.texture},uTexel:{value:new THREE.Vector2()},uPx:{value:new THREE.Vector2()},uBlur:{value:9},uShift:{value:0},uContrast:{value:1.15},uGrain:{value:.04},uFringe:{value:2},uTime:{value:0}},
   vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
-  fragmentShader:THERMAL_FINAL,depthWrite:false,depthTest:false});
+  // the ramp's 8 fixed colours become uniforms so the palette can drive them (everything else is the original FINAL)
+  fragmentShader:'uniform vec3 uTh0,uTh1,uTh2,uTh3,uTh4,uTh5,uTh6,uTh7;\n'+THERMAL_FINAL
+    .replace('vec3 c=vec3(.925,.925,.918);','vec3 c=uTh0;').replace('vec3(1.,.94,.31)','uTh1').replace('vec3(1.,.54,.15)','uTh2')
+    .replace('vec3(1.,.2,.53)','uTh3').replace('vec3(1.,.12,.72)','uTh4').replace('vec3(.25,.95,.35)','uTh5')
+    .replace('vec3(.2,.95,.85)','uTh6').replace('vec3(.45,.75,1.)','uTh7'),
+  depthWrite:false,depthTest:false});
+for(let i=0;i<8;i++) thermalMat.uniforms['uTh'+i]={value:new THREE.Color()};
 const thermalScene=new THREE.Scene(); thermalScene.add(new THREE.Mesh(quad,thermalMat));
 const _db=new THREE.Vector2();
 function renderThermal(){
@@ -1122,6 +1129,7 @@ function applyLook(){
   U.uRimC.value.copy(lin(p.rimC||p.rim));
   { const keys=p.keys||palStops(p).map((h,i)=>[h,i/6]);
     keys.slice(0,12).forEach(([h,u],i)=>{U.uK.value[i].copy(GS.lab(h));U.uKP.value[i]=u;}); U.uN.value=Math.min(keys.length,12); }
+  [p.bg[0],...palStops(p),p.rimC||p.rim].forEach((h,i)=>thermalMat.uniforms['uTh'+i].value.set(h));
   U.uMode.value=Object.keys(CMODES).indexOf(S.colorMode); U.uEnv.value=S.env; U.uFlowA.value=S.flowA;
   U.uHalo.value=S.mat==='halo'?1:0; U.uHaloW.value=S.halo*S.size; U.uRimW.value=S.rimW; U.uDither.value=S.dither;
   U.uFlat.value=(S.mat==='flat'||S.mat==='halo'||S.colorMode==='thermal')?1:0; U.uGlass.value=S.mat==='glass'?1:0; U.uPaper.value=S.mat==='paper'?1:0;
