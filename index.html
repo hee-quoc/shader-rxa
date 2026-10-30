@@ -27,6 +27,7 @@ body{background:var(--ink);color:var(--fg);font-family:var(--f-body);font-size:1
 .stage{position:relative;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 50% 40%,#1a1d27 0,var(--ink) 70%);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .frame{position:relative;max-width:100%;max-height:100%;overflow:hidden;box-shadow:0 30px 80px -30px #000}
+.frame.cut{background:repeating-conic-gradient(#d9d9de 0 25%,#f4f4f6 0 50%) 0 0/20px 20px}
 .frame canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 .frame canvas:active{cursor:grabbing}
 .hud{position:absolute;left:14px;bottom:12px;right:14px;display:flex;gap:8px;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--mute);pointer-events:none}
@@ -154,6 +155,7 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
     <details class="sec" open><summary>Khung hình</summary><div class="body">
       <div class="seg" id="ratios"></div>
       <div class="actions">
+        <div class="tog" style="flex-basis:100%"><label for="t-cut">Tách nền (nền trong suốt khi xuất)</label><input type="checkbox" id="t-cut"></div>
         <button class="btn" id="pause">Tạm dừng</button>
         <button class="btn" id="snap">Chụp khung hình</button>
         <button class="btn" id="png">Export PNG</button>
@@ -219,7 +221,7 @@ const DEF={
   shape:'disc',count:7,size:2.55,taper:0.08,headK:1,tailK:1,headCurl:1,spawnK:0,growL:0.07,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
   fan:82,lean:2,pleat:0,pleatFreq:3,twist:0,bunch:0,foldK:0,
   pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorMode:'holo3d',env:0.8,flowA:1,tBlur:0,tShift:0,tContrast:1.15,tFringe:2,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
-  ratio:'3:4',
+  ratio:'3:4',cutBg:false,
   camTheta:0,camPhi:4,zoom:1,fov:28,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0,autoRot:false
 };
 const PRESETS=[
@@ -240,7 +242,7 @@ const cv=document.getElementById('cv');
 let renderer;
 // try lighter context settings before giving up (some GPUs / blocklisted drivers refuse antialias or high-performance)
 for(const o of [{antialias:true},{antialias:false},{antialias:false,powerPreference:'low-power',failIfMajorPerformanceCaveat:false}]){
-  try{ renderer=new THREE.WebGLRenderer(Object.assign({canvas:cv},o)); break; }catch(_){}
+  try{ renderer=new THREE.WebGLRenderer(Object.assign({canvas:cv,alpha:true},o)); break; }catch(_){}
 }
 try{ if(!renderer) throw new Error('WebGL unavailable'); }
 catch(e){ discFail('Trình duyệt không bật được WebGL nên không vẽ được hình. Thử: (1) thoát hẳn Chrome bằng Cmd + Q rồi mở lại; (2) Settings → System → bật "Use graphics acceleration when available"; (3) đóng bớt tab nặng. Mở chrome://gpu để xem WebGL có đang bị tắt không.'); throw e; }
@@ -423,12 +425,14 @@ const thermalMat=new THREE.ShaderMaterial({
   uniforms:{uHeat:{value:heatRT.texture},uTexel:{value:new THREE.Vector2()},uPx:{value:new THREE.Vector2()},uBlur:{value:9},uShift:{value:0},uContrast:{value:1.15},uGrain:{value:.04},uFringe:{value:2},uTime:{value:0}},
   vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
   // the ramp's 8 fixed colours become uniforms so the palette can drive them (everything else is the original FINAL)
-  fragmentShader:'uniform vec3 uTh0,uTh1,uTh2,uTh3,uTh4,uTh5,uTh6,uTh7;\n'+THERMAL_FINAL
+  fragmentShader:'uniform vec3 uTh0,uTh1,uTh2,uTh3,uTh4,uTh5,uTh6,uTh7; uniform float uCut;\n'+THERMAL_FINAL
     .replace('vec3 c=vec3(.925,.925,.918);','vec3 c=uTh0;').replace('vec3(1.,.94,.31)','uTh1').replace('vec3(1.,.54,.15)','uTh2')
     .replace('vec3(1.,.2,.53)','uTh3').replace('vec3(1.,.12,.72)','uTh4').replace('vec3(.25,.95,.35)','uTh5')
-    .replace('vec3(.2,.95,.85)','uTh6').replace('vec3(.45,.75,1.)','uTh7'),
+    .replace('vec3(.2,.95,.85)','uTh6').replace('vec3(.45,.75,1.)','uTh7')
+    .replace('gl_FragColor=vec4(col,1.);','float a=mix(1.,clamp(max(hc,max(hr,hb))*14.,0.,1.),uCut); gl_FragColor=vec4(col*a,a);'),
   depthWrite:false,depthTest:false});
 for(let i=0;i<8;i++) thermalMat.uniforms['uTh'+i]={value:new THREE.Color()};
+thermalMat.uniforms.uCut={value:0}; thermalMat.transparent=false;
 const thermalScene=new THREE.Scene(); thermalScene.add(new THREE.Mesh(quad,thermalMat));
 const _db=new THREE.Vector2();
 function renderThermal(){
@@ -440,8 +444,8 @@ function renderThermal(){
   const k=renderer.getPixelRatio()/Math.min(window.devicePixelRatio||1,2), u=thermalMat.uniforms;
   u.uTexel.value.set(1/hw,1/hh); u.uPx.value.set(1/_db.x,1/_db.y);
   u.uBlur.value=S.tBlur*k; u.uShift.value=S.tShift; u.uContrast.value=S.tContrast; u.uGrain.value=S.grain;
-  u.uFringe.value=S.tFringe*renderer.getPixelRatio(); u.uTime.value=time;
-  renderer.clear(); renderer.render(thermalScene,orthoCam);
+  u.uFringe.value=S.tFringe*renderer.getPixelRatio(); u.uTime.value=time; u.uCut.value=S.cutBg?1:0;
+  renderer.setClearColor(0x000000,0); renderer.clear(); renderer.render(thermalScene,orthoCam);
 }
 
 /* ---------- layer geometry: thin card, fan caps (aEdge 0 centre → 1 rim) + side band (aSide 1) ---------- */
@@ -1173,6 +1177,7 @@ function render(dt){
   U.uUpL.value.set(0,1,0).transformDirection(_inv);
   grainMat.uniforms.uTime.value=time;
   if(S.colorMode==='thermal'){ renderThermal(); return; }
+  if(S.cutBg){ renderer.setClearColor(0x000000,0); renderer.clear(); renderer.render(scene,camera); return; }
   renderer.clear(); renderer.render(bgScene,orthoCam); renderer.clearDepth(); renderer.render(scene,camera); renderer.render(grainScene,orthoCam);
 }
 const hud=document.getElementById('hud'),hud2=document.getElementById('hud2');
@@ -1245,6 +1250,7 @@ function buildUI(){
   $('t-avoid').addEventListener('change',e=>{S.avoid=e.target.checked;});
   $('t-cauto').addEventListener('change',e=>{S.colorAuto=e.target.checked;});
   $('t-auto').addEventListener('change',e=>{S.autoRot=e.target.checked;});
+  $('t-cut').addEventListener('change',e=>{S.cutBg=e.target.checked;syncUI();});
   $('skelFile').addEventListener('change',e=>{const f=e.target.files[0]; if(f) loadSkeletonFile(f); e.target.value='';});
   $('t-upclosed').addEventListener('change',e=>{S.upClosed=e.target.checked; if(upPts) upPts=resample(upPts,S.upClosed,UPN); targetInit=false;});
   const st=$('stage');
@@ -1296,7 +1302,7 @@ function syncUI(){
   press('#skels button',S.skel);press('#shapes button',S.shape);press('#mats button',S.mat);press('#cmodes button',S.colorMode);press('#ratios button',S.ratio);
   syncEditor(); press('#pals .pal',S.pal);press('#presets .preset',activePreset);
   for(const g in SLIDERS) SLIDERS[g].forEach(([k])=>{$('s-'+k).value=S[k];$('v-'+k).textContent=fmt(k,S[k]);});
-  $('t-spine').checked=S.spine;$('t-avoid').checked=S.avoid;$('t-cauto').checked=S.colorAuto;$('t-auto').checked=S.autoRot;
+  $('t-spine').checked=S.spine;$('t-avoid').checked=S.avoid;$('t-cauto').checked=S.colorAuto;$('t-auto').checked=S.autoRot;$('t-cut').checked=S.cutBg;frame.classList.toggle('cut',S.cutBg);
   $('t-upclosed').checked=S.upClosed;
   $('pause').textContent=paused?'Chạy tiếp':'Tạm dừng';
   resize();
@@ -1361,7 +1367,7 @@ function pasteDialog(){
 function loadPreset(id){
   const u=SAVED.find(x=>x.id===id); if(u){ applySettings(u.set); activePreset=id; syncUI(); return; }
   const p=PRESETS.find(x=>x.id===id); activePreset=id;
-  const keep={spine:S.spine,seed:S.seed,closed:S.closed,avoid:S.avoid,autoRot:S.autoRot,upClosed:S.upClosed,upDepth:S.upDepth,upFreq:S.upFreq,upCurveZ:S.upCurveZ,upSmooth:S.upSmooth,upDepthK:S.upDepthK};
+  const keep={cutBg:S.cutBg,spine:S.spine,seed:S.seed,closed:S.closed,avoid:S.avoid,autoRot:S.autoRot,upClosed:S.upClosed,upDepth:S.upDepth,upFreq:S.upFreq,upCurveZ:S.upCurveZ,upSmooth:S.upSmooth,upDepthK:S.upDepthK};
   S=Object.assign({},DEF,p.set,keep); targetInit=false; applyLook(); syncUI();
 }
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}
@@ -1385,7 +1391,7 @@ function toggleRecord(){
   const btn=$('mp4');
   if(rec){ rec.stop(); return; }
   if(!window.MediaRecorder||!cv.captureStream) return toast('Trình duyệt không hỗ trợ quay video');
-  const types=['video/mp4;codecs=avc1.640033','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const types=S.cutBg?['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']:['video/mp4;codecs=avc1.640033','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
   const type=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
   const ext=type.startsWith('video/mp4')?'mp4':'webm';
   hiRes=true; resize();
@@ -1398,7 +1404,7 @@ function toggleRecord(){
     const u=URL.createObjectURL(new Blob(recChunks,{type:type||'video/webm'}));
     download(u,`disc-spine-${activePreset}-${stamp()}.${ext}`); setTimeout(()=>URL.revokeObjectURL(u),10000);
     rec=null; btn.classList.remove('rec'); btn.textContent='Export MP4';
-    toast(ext==='mp4'?'Đã lưu MP4':'Trình duyệt này chỉ quay được WebM, đã lưu .webm');
+    toast(ext==='mp4'?'Đã lưu MP4':S.cutBg?'Đã lưu WebM nền trong suốt (MP4 không chứa được nền trong suốt)':'Trình duyệt này chỉ quay được WebM, đã lưu .webm');
   };
   if(paused) togglePause();
   rec.start(250); btn.classList.add('rec');
