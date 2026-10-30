@@ -220,7 +220,7 @@ const DEF={
   skel:'column',closed:true,seed:7,spine:false,upClosed:false,upDepth:0.8,upFreq:1,upDepthK:1,upCurveZ:0.6,upSmooth:0.3,
   shape:'disc',count:7,size:2.55,taper:0.08,headK:1,tailK:1,headCurl:1,spawnK:0,growL:0.07,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
   fan:82,lean:2,pleat:0,pleatFreq:3,twist:0,bunch:0,foldK:0,
-  pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0,halo:0.9,dither:0,colorMode:'holo3d',env:0,flowA:1,tBlur:0,tShift:0,tContrast:1.15,tFringe:2,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
+  pal:'cobalt',mat:'flat',outline:0.9,lineGrad:1,lineShift:0.5,grad:0.15,shadow:0.6,grain:0,halo:0.9,dither:0,colorMode:'holo3d',env:0,flowA:1,tBlur:0,tShift:0,tContrast:1.15,tFringe:2,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
   ratio:'3:4',cutBg:false,
   camTheta:0,camPhi:4,zoom:1,fov:28,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0,autoRot:false
 };
@@ -497,7 +497,7 @@ const U={uC0:{value:new THREE.Color()},uC1:{value:new THREE.Color()},uC2:{value:
   uStripe:{value:0},uSplit:{value:0},uGradAxis:{value:0},uCyclic:{value:0},
   uS0:{value:new THREE.Color()},uS1:{value:new THREE.Color()},uS2:{value:new THREE.Color()},uS3:{value:new THREE.Color()},uS4:{value:new THREE.Color()},uS5:{value:new THREE.Color()},
   uRimC:{value:new THREE.Color()},uLightL:{value:new THREE.Vector3(0,1,0)},uBulge:{value:1},uShade:{value:.9},uHalo:{value:0},uHaloW:{value:1},uRimW:{value:0},uDither:{value:0.1},uShift:{value:0},
-  uNb:{value:null},uCount:{value:1},uShape:{value:0},uCamL:{value:new THREE.Vector3()},uOutline:{value:0},uGrad:{value:0.3},uFlat:{value:0},uGlass:{value:0},uPaper:{value:0},
+  uNb:{value:null},uCount:{value:1},uShape:{value:0},uCamL:{value:new THREE.Vector3()},uOutline:{value:0},uLineGrad:{value:1},uLineShift:{value:.5},uGrad:{value:0.3},uFlat:{value:0},uGlass:{value:0},uPaper:{value:0},
   uMode:{value:0},uK:{value:Array.from({length:12},()=>new THREE.Vector3())},uKP:{value:new Array(12).fill(1)},uN:{value:6},uEnv:{value:.8},uFlowA:{value:1},uTime:{value:0},uUpL:{value:new THREE.Vector3(0,1,0)}};
 const mat=new THREE.MeshStandardMaterial({roughness:0.82,metalness:0,side:THREE.DoubleSide});
 mat.onBeforeCompile=sh=>{
@@ -512,6 +512,7 @@ varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varyi
   vVP = (modelViewMatrix * instanceMatrix * vec4(transformed,1.0)).xyz; vVC = (modelViewMatrix * vec4(vC,1.0)).xyz;
   vVZ = normalize(mat3(modelViewMatrix) * mat3(instanceMatrix) * vec3(0.,0.,1.));`);
   sh.fragmentShader=`uniform vec3 uC0,uC1,uC2,uC3,uLine,uRim,uHi,uDeep;
+uniform float uLineGrad,uLineShift;
 uniform float uStripe,uSplit,uOutline,uGrad,uFlat,uGlass,uPaper,uGradAxis,uCyclic;
 varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC,vVP,vVC,vVZ;
 uniform float uMode,uEnv,uFlowA,uTime; uniform vec3 uUpL;
@@ -707,7 +708,8 @@ vec3 discColor(){
     gl_FragColor.rgb = mix(gl_FragColor.rgb, flatC, uFlat);
     float fw = max(fwidth(vEdge),1e-4);
     float line = vSide>.5 ? 1. : smoothstep(1.-fw*1.8, 1.-fw*.3, vEdge);
-    gl_FragColor.rgb = mix(gl_FragColor.rgb, uLine, line*uOutline);
+    vec3 lineC = mix(uLine, rampS(vT*(uCyclic>.5?1.:5./6.)+uShift+uLineShift), uLineGrad);
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, lineC, line*uOutline);
     if(uGlass>.5){
       float fr = pow(1.-abs(normal.z), 2.);
       vec2 q = vL*3.2 + vIdx*1.7;
@@ -1138,7 +1140,7 @@ function applyLook(){
   U.uC0.value.copy(lin(p.c[0]));U.uC1.value.copy(lin(p.c[1]));U.uC2.value.copy(lin(p.c[2]));U.uC3.value.copy(lin(p.c[3]));
   U.uLine.value.copy(lin(p.line));U.uRim.value.copy(lin(p.rim));U.uHi.value.copy(lin(p.hi));U.uDeep.value.copy(lin(p.deep));
   U.uStripe.value=p.stripe?1:0; U.uSplit.value=p.split?1:0;
-  U.uOutline.value=S.outline; U.uGrad.value=S.grad;
+  U.uOutline.value=S.outline; U.uLineGrad.value=S.lineGrad; U.uLineShift.value=S.lineShift; U.uGrad.value=S.grad;
   const st=p.stops||[p.hi,p.c[3],p.c[2],p.c[1],p.c[0],p.deep];
   [U.uS0,U.uS1,U.uS2,U.uS3,U.uS4,U.uS5].forEach((u,i)=>u.value.copy(lin(st[i])));
   U.uRimC.value.copy(lin(p.rimC||p.rim));
@@ -1208,7 +1210,7 @@ const SLIDERS={
   'g-up':[['upCurveZ','Z theo độ cong (mỗi vòng nâng lên)',0,4,.01],['upDepth','Z sóng đều',0,4,.01],['upFreq','Số sóng Z',0,6,.1],['upDepthK','Giữ Z gốc (file JSON)',0,2,.01],['upSmooth','Làm mượt khung',0,1,.01]],
   'g-layer':[['count','Số lớp',3,400,1],['size','Kích thước',.2,3,.01],['taper','Thon dần (đầu → đuôi)',-1,.95,.01],['headK','Cỡ đầu',.1,3,.01],['tailK','Cỡ đuôi',.1,3,.01],['headCurl','Độ cuộn đầu (Rồng bay)',0,1.5,.01],['spawnK','Cỡ shape mới ở đầu',0,1,.01],['growL','Độ dài đoạn mọc ra',.02,.5,.01],['aspect','Tỉ lệ dẹt',.12,1.6,.01],['thick','Độ dày',0,.08,.001],['stack','Xếp tầng (lệch chiều sâu)',0,2,.01],['gap','Khoảng hở tối thiểu',0,.2,.005]],
   'g-fold':[['fan','Xoè (nghiêng tăng dần)',-120,120,1],['lean','Nghiêng chung',-90,90,1],['pleat','Nếp gấp',0,80,1],['pleatFreq','Số nếp trên khung',.5,30,.5],['twist','Xoắn (vòng)',-6,6,.05],['bunch','Dồn lớp (accordion)',0,.95,.01],['foldK','Gập khi bị dồn',0,1.5,.01]],
-  'g-look':[['env','Ánh sáng môi trường (bụng tối, lưng sáng)',0,1,.01],['flowA','Độ gợn sóng màu (kiểu Sóng chảy)',0,3,.01],['tBlur','Thermal: độ loang nhiệt',0,30,.5],['tShift','Thermal: dịch nhiệt',-.3,.3,.01],['tContrast','Thermal: tương phản',.5,2.2,.01],['tFringe','Thermal: lệch màu (fringe)',0,6,.1],['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
+  'g-look':[['env','Ánh sáng môi trường (bụng tối, lưng sáng)',0,1,.01],['flowA','Độ gợn sóng màu (kiểu Sóng chảy)',0,3,.01],['tBlur','Thermal: độ loang nhiệt',0,30,.5],['tShift','Thermal: dịch nhiệt',-.3,.3,.01],['tContrast','Thermal: tương phản',.5,2.2,.01],['tFringe','Thermal: lệch màu (fringe)',0,6,.1],['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['lineGrad','Viền theo gradient (0 = màu viền cố định)',0,1,.01],['lineShift','Dịch màu viền trên dải gradient',0,1,.01],['grain','Grain',0,.15,.005]]
 };
 const DEGK=['fan','lean','pleat','camTheta','camPhi','fov','rotX','rotY','rotZ'];
 const fmt=(k,v)=>k==='colorPhase'?(+v).toFixed(3):k==='colorDur'?(+v).toFixed(1)+'s':k==='zoom'?(+v).toFixed(2)+'×':k==='count'?String(v|0):DEGK.includes(k)?Math.round(v)+'°':k==='thick'||k==='gap'?(+v).toFixed(3):(+v).toFixed(2);
