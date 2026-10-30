@@ -202,6 +202,12 @@ const PALETTES={
   rxVanHoa:{name:'RX Văn Hoá',bg:['#ffffff','#ececf0'],stops:['#dcb8f9','#d9cbf8','#d5e3f8','#a1b0f1','#5c67e6','#2a2fd8'],c:['#2a2fd8','#5c67e6','#d5e3f8','#dcb8f9'],line:'#2a2fd8',rim:'#dcb8f9',hi:'#dcb8f9',deep:'#2a2fd8'},
   rxCongNghe:{name:'RX Công Nghệ',bg:['#ffffff','#ececf0'],stops:['#86fcc8','#80f0c6','#6fd0c8','#58a6cc','#4479d2','#2f55d8'],c:['#2f55d8','#4479d2','#6fd0c8','#86fcc8'],line:'#2f55d8',rim:'#86fcc8',hi:'#86fcc8',deep:'#2f55d8'},
   rxSteam:{name:'RX STEAM',bg:['#ffffff','#ececf0'],stops:['#d4ff6c','#cbf56f','#98bb84','#5a6fa0','#2f3dc4','#1a1edc'],c:['#1a1edc','#2f3dc4','#98bb84','#d4ff6c'],line:'#1a1edc',rim:'#d4ff6c',hi:'#d4ff6c',deep:'#1a1edc'},
+  chainCam:{name:'Chain Cam',bg:['#C3C3C3','#b4b4b4'],keys:[['#FF5414',0],['#D2160E',.06],['#5C0012',.12],['#A8060E',.19],['#F2400E',.25],['#FF5A1A',.32],['#FF5A1A',.41],['#F28CB4',.49],['#ACA8EE',.57],['#EE8EC2',.67],['#FF5A14',.74],['#F7A2C2',.85]],
+    stops:['#FF5414','#5C0012','#F2400E','#F28CB4','#ACA8EE','#F7A2C2'],c:['#5C0012','#D2160E','#FF5414','#F28CB4'],line:'#5C0012',rim:'#F7A2C2',hi:'#F7A2C2',deep:'#5C0012'},
+  chainLam:{name:'Chain Lam',bg:['#C3C3C3','#b4b4b4'],keys:[['#1A40DA',0],['#2448DC',.05],['#6E86D8',.09],['#D2CCB8',.13],['#CFCAB8',.30],['#2E50DE',.60],['#A9AEDB',.71],['#1638D6',.78]],
+    stops:['#1A40DA','#6E86D8','#D2CCB8','#2E50DE','#A9AEDB','#1638D6'],c:['#1638D6','#2E50DE','#6E86D8','#D2CCB8'],line:'#1638D6',rim:'#D2CCB8',hi:'#D2CCB8',deep:'#1638D6'},
+  chainReu:{name:'Chain Rêu',bg:['#C3C3C3','#b4b4b4'],keys:[['#16521F',0],['#0C4515',.12],['#1C5E27',.22],['#0A3A0E',.34],['#0D4414',.46],['#1E6A2E',.56],['#2F8044',.66],['#2A7640',.78]],
+    stops:['#16521F','#1C5E27','#0A3A0E','#1E6A2E','#2F8044','#2A7640'],c:['#0A3A0E','#16521F','#1E6A2E','#2F8044'],line:'#0A3A0E',rim:'#2F8044',hi:'#2F8044',deep:'#0A3A0E'},
   rxImpact:{name:'RX Impact',bg:['#ffffff','#ececf0'],stops:['#ececec','#e4eef2','#d0f4f8','#bdf6fc','#6e8ae8','#1a20d8'],c:['#1a20d8','#6e8ae8','#d0f4f8','#ececec'],line:'#1a20d8',rim:'#ececec',hi:'#ececec',deep:'#1a20d8'}
 };
 
@@ -211,7 +217,7 @@ const DEF={
   skel:'column',closed:true,seed:7,spine:false,upClosed:false,upDepth:0.8,upFreq:1,upDepthK:1,upCurveZ:0.6,upSmooth:0.3,
   shape:'disc',count:7,size:2.55,taper:0.08,headK:1,tailK:1,headCurl:1,spawnK:0,growL:0.07,aspect:1,thick:0,avoid:true,gap:0.02,stack:0,
   fan:82,lean:2,pleat:0,pleatFreq:3,twist:0,bunch:0,foldK:0,
-  pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorMode:'holo3d',env:0.8,flowA:1,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
+  pal:'cobalt',mat:'flat',outline:0.9,grad:0.15,shadow:0.6,grain:0.04,halo:0.9,dither:0.12,colorMode:'holo3d',env:0.8,flowA:1,tBlur:9,tShift:0,tContrast:1.15,tFringe:2,colorPhase:0,colorAuto:true,colorDur:8,rimW:0.12,bulge:3.8,shade:0.9,
   ratio:'3:4',
   camTheta:0,camPhi:4,zoom:1,fov:28,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0,autoRot:false
 };
@@ -222,6 +228,8 @@ const PRESETS=[
   {id:'vongcung',name:'Vòng Cung',note:'Văn Hoá',set:{mode:'B',speed:0.6,amp:0.4,flow:0.4,skel:'arc',shape:'disc',count:30,size:1.5,taper:-0.15,aspect:0.4,thick:0.01,fan:0,lean:22,pleat:0,bunch:0.35,foldK:0.5,pal:'rxVanHoa',mat:'halo',outline:0,grad:0.55,halo:0.8,dither:0.07,grain:0.05,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'4:3',camTheta:32,camPhi:18,zoom:1.15}},
   {id:'quat',name:'Quạt',note:'Điểm Đến',set:{mode:'B',speed:0.5,amp:0.3,flow:0.35,skel:'fan',shape:'disc',count:8,size:3.1,taper:-0.1,aspect:0.5,thick:0,stack:0.8,fan:0,lean:90,pleat:0,twist:0,bunch:0.15,foldK:0,pal:'rxDiemDen',mat:'halo',outline:0,grad:0.6,halo:1.4,dither:0.07,grain:0.06,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'3:4',camTheta:0,camPhi:0,zoom:1.45}},
   {id:'vay',name:'Vảy',note:'STEAM',set:{mode:'B',speed:0.5,amp:0.3,flow:0.3,skel:'rows',shape:'disc',count:30,size:1.35,taper:0,aspect:1,thick:0,stack:0.6,fan:0,lean:90,pleat:0,twist:0,bunch:0,foldK:0,pal:'rxSteam',mat:'halo',outline:0,grad:0.55,halo:0.75,dither:0.07,grain:0.05,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'3:4',camTheta:0,camPhi:0,zoom:1.3}},
+  {id:'xich',name:'Xích Chroma',note:'Chroma Chain',set:{mode:'B',speed:0.5,amp:0.35,flow:0.25,skel:'ring',shape:'disc',count:150,size:0.75,taper:0,aspect:1,thick:0,stack:0,fan:0,lean:0,pleat:0,twist:0,bunch:0.05,foldK:0,pal:'chainCam',mat:'halo',colorMode:'chroma',outline:0,grain:0.02,dither:0.05,ratio:'4:3',camTheta:-10,camPhi:28,zoom:1.15}},
+  {id:'nhiet',name:'Rồng Nhiệt',note:'Thermal Bloom',set:{mode:'B',speed:0.5,amp:1,flow:0.35,skel:'dragon',shape:'disc',count:52,size:1.25,taper:0.8,aspect:1,thick:0.02,fan:0,lean:10,pleat:16,pleatFreq:5,twist:0.25,bunch:0.12,foldK:0.25,pal:'rxDiSan',mat:'halo',colorMode:'thermal',outline:0,tBlur:9,tShift:0,tContrast:1.15,tFringe:2,grain:0.04,ratio:'3:4',camTheta:-28,camPhi:-16,zoom:1.45}},
   {id:'vong',name:'Vòng Holo',note:'Impact',set:{mode:'B',speed:0.45,amp:0.5,flow:0.4,skel:'ring',shape:'tile',count:46,size:0.9,taper:0,aspect:1,thick:0.02,stack:0,fan:0,lean:28,pleat:0,twist:0,bunch:0.1,foldK:0.2,pal:'rxImpact',mat:'halo',outline:0,grad:0.55,halo:1.2,dither:0.07,grain:0.03,rimW:0.12,bulge:3.8,shade:1,colorAuto:true,colorDur:8,ratio:'4:3',camTheta:-20,camPhi:22,zoom:1.05}}
 ];
 let S=Object.assign({},DEF,PRESETS[0].set), activePreset='rongvay';
@@ -267,6 +275,167 @@ const grainMat=new THREE.ShaderMaterial({
     void main(){ float n=h(gl_FragCoord.xy+fract(uTime)*97.); gl_FragColor=vec4(vec3(n),uGrain*2.2); }`,
   transparent:true,depthWrite:false,depthTest:false});
 const grainScene=new THREE.Scene(); grainScene.add(new THREE.Mesh(quad,grainMat));
+
+/* ---------- imported shaders (kept as written): Chroma Chain (common.js + 03-chain.js) and Thermal Bloom ---------- */
+const GS_NOISE=`
+vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+  vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g;
+  vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+  i=mod289(i);
+  vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+  float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.0*floor(p*ns.z*ns.z);
+  vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+  vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+  vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+  return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}`;
+const GS_RAMP=`
+vec3 oklab2lin(vec3 c){
+  float l_=c.x+0.3963377774*c.y+0.2158037573*c.z;
+  float m_=c.x-0.1055613458*c.y-0.0638541728*c.z;
+  float s_=c.x-0.0894841775*c.y-1.2914855480*c.z;
+  float l=l_*l_*l_, m=m_*m_*m_, s=s_*s_*s_;
+  return vec3( 4.0767416621*l-3.3077115913*m+0.2309699292*s,
+              -1.2684380046*l+2.6097574011*m-0.3413193965*s,
+              -0.0041960863*l-0.7034186147*m+1.7076147010*s);
+}
+vec3 lin2srgb(vec3 c){ c=clamp(c,0.0,1.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(0.0031308,c)); }
+vec3 toSRGB(vec3 lab){ return lin2srgb(oklab2lin(lab)); }
+vec3 ramp6lab(vec3 c[6], float p[6], float t){
+  t=clamp(t,p[0],p[5]); vec3 col=c[0];
+  for(int i=1;i<6;i++){
+    float k=clamp((t-p[i-1])/(p[i]-p[i-1]),0.0,1.0);
+    k=mix(k, k*k*(3.0-2.0*k), 0.3);           // slight ease, no flat plateau at stops
+    col=mix(col,c[i],k);
+  }
+  return col;
+}
+vec3 ramp6(vec3 c[6], float p[6], float t){ return toSRGB(ramp6lab(c,p,t)); }
+float hash12(vec2 p){ vec3 p3=fract(vec3(p.xyx)*0.1031); p3+=dot(p3,p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+// triangular dither (~1/255) + film grain, applied in sRGB at the end
+vec3 finish(vec3 srgb, vec2 frag, float time, float grain){
+  float a=hash12(frag+fract(time)*97.0), b=hash12(frag.yx+fract(time*1.3)*53.0);
+  return srgb + (a+b-1.0)*(1.0/255.0) + (a-0.5)*grain;
+}
+// soft domain-warped noise: organic, no hard marbling
+float softNoise(vec3 p){
+  vec3 w=vec3(snoise(p+vec3(3.1,0.0,0.0)), snoise(p+vec3(0.0,5.7,0.0)), snoise(p+vec3(0.0,0.0,9.2)));
+  p+=w*0.35;
+  return snoise(p)*0.7 + snoise(p*1.9+11.0)*0.3;
+}`;
+const GS_CHAIN=`
+uniform vec3 uK[12]; uniform float uKP[12]; uniform int uN;
+// looping keyframe gradient in OKLab
+vec3 loopRamp(float u){
+  u = fract(u);
+  vec3 col = uK[0];
+  for(int i=0;i<12;i++){
+    if(i >= uN) break;
+    bool last = (i+1 >= uN);
+    float a = uKP[i];
+    float b = last ? uKP[0] + 1.0 : uKP[i+1];
+    vec3 ca = uK[i];
+    vec3 cb = last ? uK[0] : uK[i+1];
+    float uu = u < uKP[0] ? u + 1.0 : u;
+    if(uu >= a && uu < b){
+      float k = (uu-a)/(b-a);
+      k = mix(k, k*k*(3.0-2.0*k), 0.4);
+      col = mix(ca, cb, k);
+    }
+  }
+  return col;
+}
+// soft fade: Gaussian-weighted average of 7 samples along the loop
+vec3 softLoop(float u, float w){
+  vec3 acc = vec3(0.0); float tot = 0.0;
+  for(int i=-3;i<=3;i++){
+    float o = float(i)/3.0, g = exp(-o*o*2.0);
+    acc += loopRamp(u + o*w)*g; tot += g;
+  }
+  return acc/tot;
+}
+`;
+const THERMAL_FINAL=`precision highp float;
+varying vec2 vUv;
+uniform sampler2D uHeat;uniform vec2 uTexel,uPx;uniform float uBlur,uShift,uContrast,uGrain,uFringe,uTime;
+float blurAt(vec2 uv){
+  float s=0.;
+  for(int i=0;i<28;i++){float f=float(i);float r=sqrt((f+.5)/28.)*uBlur;float a=f*2.39996;
+    s+=texture2D(uHeat,uv+vec2(cos(a),sin(a))*r*uTexel).r;}
+  return s/28.;
+}
+vec3 ramp(float h){
+  vec3 c=vec3(.925,.925,.918);
+  c=mix(c,vec3(1.,.94,.31),smoothstep(.0,.09,h));
+  c=mix(c,vec3(1.,.54,.15),smoothstep(.09,.2,h));
+  c=mix(c,vec3(1.,.2,.53),smoothstep(.2,.32,h));
+  c=mix(c,vec3(1.,.12,.72),smoothstep(.32,.55,h));
+  c=mix(c,vec3(.25,.95,.35),smoothstep(.58,.7,h));
+  c=mix(c,vec3(.2,.95,.85),smoothstep(.7,.85,h));
+  c=mix(c,vec3(.45,.75,1.),smoothstep(.85,1.,h));
+  return c;
+}
+float grade(float h){
+  float k=smoothstep(.02,.18,h);
+  return mix(h,clamp(.5+(h-.5)*uContrast+uShift,0.,1.),k);
+}
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){
+  vec2 off=vec2(uFringe,uFringe*.4)*uPx;
+  float hc=grade(blurAt(vUv));
+  float hr=grade(blurAt(vUv+off));
+  float hb=grade(blurAt(vUv-off));
+  vec3 col=vec3(ramp(hr).r,ramp(hc).g,ramp(hb).b);
+  col+=(hash(gl_FragCoord.xy+fract(uTime)*91.)-.5)*uGrain;
+  gl_FragColor=vec4(col,1.);
+}`;
+const GS={
+  lab(h){
+    const c = new THREE.Color('#' + h.replace('#', ''));
+    const lin = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+    const r = lin(c.r), g = lin(c.g), b = lin(c.b);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return new THREE.Vector3(
+      0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+  }
+};
+const heatRT=new THREE.WebGLRenderTarget(2,2,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
+const thermalMat=new THREE.ShaderMaterial({
+  uniforms:{uHeat:{value:heatRT.texture},uTexel:{value:new THREE.Vector2()},uPx:{value:new THREE.Vector2()},uBlur:{value:9},uShift:{value:0},uContrast:{value:1.15},uGrain:{value:.04},uFringe:{value:2},uTime:{value:0}},
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
+  fragmentShader:THERMAL_FINAL,depthWrite:false,depthTest:false});
+const thermalScene=new THREE.Scene(); thermalScene.add(new THREE.Mesh(quad,thermalMat));
+const _db=new THREE.Vector2();
+function renderThermal(){
+  renderer.getDrawingBufferSize(_db);
+  const hw=Math.max(2,Math.round(_db.x*.5)), hh=Math.max(2,Math.round(_db.y*.5));
+  if(heatRT.width!==hw||heatRT.height!==hh) heatRT.setSize(hw,hh);
+  renderer.setRenderTarget(heatRT); renderer.setClearColor(0x000000,1); renderer.clear(); renderer.render(scene,camera);
+  renderer.setRenderTarget(null);
+  const k=renderer.getPixelRatio()/Math.min(window.devicePixelRatio||1,2), u=thermalMat.uniforms;
+  u.uTexel.value.set(1/hw,1/hh); u.uPx.value.set(1/_db.x,1/_db.y);
+  u.uBlur.value=S.tBlur*k; u.uShift.value=S.tShift; u.uContrast.value=S.tContrast; u.uGrain.value=S.grain;
+  u.uFringe.value=S.tFringe*renderer.getPixelRatio(); u.uTime.value=time;
+  renderer.clear(); renderer.render(thermalScene,orthoCam);
+}
 
 /* ---------- layer geometry: thin card, fan caps (aEdge 0 centre → 1 rim) + side band (aSide 1) ---------- */
 function outline(shape,n){
@@ -317,20 +486,22 @@ const U={uC0:{value:new THREE.Color()},uC1:{value:new THREE.Color()},uC2:{value:
   uS0:{value:new THREE.Color()},uS1:{value:new THREE.Color()},uS2:{value:new THREE.Color()},uS3:{value:new THREE.Color()},uS4:{value:new THREE.Color()},uS5:{value:new THREE.Color()},
   uRimC:{value:new THREE.Color()},uLightL:{value:new THREE.Vector3(0,1,0)},uBulge:{value:1},uShade:{value:.9},uHalo:{value:0},uHaloW:{value:1},uRimW:{value:0},uDither:{value:0.1},uShift:{value:0},
   uNb:{value:null},uCount:{value:1},uShape:{value:0},uCamL:{value:new THREE.Vector3()},uOutline:{value:0},uGrad:{value:0.3},uFlat:{value:0},uGlass:{value:0},uPaper:{value:0},
-  uMode:{value:0},uEnv:{value:.8},uFlowA:{value:1},uTime:{value:0},uUpL:{value:new THREE.Vector3(0,1,0)}};
+  uMode:{value:0},uK:{value:Array.from({length:12},()=>new THREE.Vector3())},uKP:{value:new Array(12).fill(1)},uN:{value:6},uEnv:{value:.8},uFlowA:{value:1},uTime:{value:0},uUpL:{value:new THREE.Vector3(0,1,0)}};
 const mat=new THREE.MeshStandardMaterial({roughness:0.82,metalness:0,side:THREE.DoubleSide});
 mat.onBeforeCompile=sh=>{
   Object.assign(sh.uniforms,U);
   sh.vertexShader=`attribute float aEdge; attribute float aSide; attribute float aT; attribute float aIdx; attribute float aVis;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC,vVP,vVC,vVZ;
 `+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   vL=position.xy; vEdge=aEdge; vSide=aSide; vT=aT; vIdx=aIdx; vVis=aVis;
   vWN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
   vLP = (instanceMatrix * vec4(transformed,1.0)).xyz;
-  vAX = mat3(instanceMatrix)[0]; vAY = mat3(instanceMatrix)[1]; vAZ = mat3(instanceMatrix)[2]; vC = instanceMatrix[3].xyz;`);
+  vAX = mat3(instanceMatrix)[0]; vAY = mat3(instanceMatrix)[1]; vAZ = mat3(instanceMatrix)[2]; vC = instanceMatrix[3].xyz;
+  vVP = (modelViewMatrix * instanceMatrix * vec4(transformed,1.0)).xyz; vVC = (modelViewMatrix * vec4(vC,1.0)).xyz;
+  vVZ = normalize(mat3(modelViewMatrix) * mat3(instanceMatrix) * vec3(0.,0.,1.));`);
   sh.fragmentShader=`uniform vec3 uC0,uC1,uC2,uC3,uLine,uRim,uHi,uDeep;
 uniform float uStripe,uSplit,uOutline,uGrad,uFlat,uGlass,uPaper,uGradAxis,uCyclic;
-varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC;
+varying vec2 vL; varying float vEdge,vSide,vT,vIdx,vVis; varying vec3 vWN; varying vec3 vLP; varying vec3 vAX,vAY,vAZ,vC,vVP,vVC,vVZ;
 uniform float uMode,uEnv,uFlowA,uTime; uniform vec3 uUpL;
 uniform vec3 uS0,uS1,uS2,uS3,uS4,uS5,uRimC,uCamL,uLightL;
 uniform float uBulge,uShade;
@@ -411,7 +582,7 @@ vec3 rampS(float x){ x=fract(x)*6.; float i=floor(x), f=x-i;
   vec3 c=.5*(2.*p1+(p2-p0)*f+(2.*p0-5.*p1+4.*p2-p3)*f*f+(3.*p1-p0-3.*p2+p3)*f*f*f);
   return clamp(c,min(p1,p2)-.04,max(p1,p2)+.04); }
 vec3 haloColor(){
-  if(uMode>2.5) return haloClassic();
+  if(uMode>2.5) return haloClassic(); // chroma / thermal are handled in discColor
   float n1=hh(gl_FragCoord.xy)-.5, n2=hh(gl_FragCoord.yx+17.3)-.5;
   float s=vT*(uCyclic>.5?1.:5./6.)+uShift;
   vec3 Z=normalize(vAZ), X=normalize(vAX), Y=normalize(vAY);
@@ -451,7 +622,62 @@ vec3 haloColor(){
 }
 vec3 ramp(float t){ t=clamp(t,0.,1.); if(uCyclic>.5) t=1.-abs(2.*t-1.); t*=3.; if(t<1.) return mix(uC0,uC1,t); if(t<2.) return mix(uC1,uC2,t-1.); return mix(uC2,uC3,t-2.); }
 vec3 pick(float k){ k=mod(floor(k+.5)+.5,4.); return k<1.?uC0:k<2.?uC1:k<3.?uC2:uC3; }
+`+GS_NOISE+GS_RAMP+GS_CHAIN+`
+// ---- Chroma Chain: the chain's main() body; u runs along the spine (the chain ran around each link),
+//      N is the tube normal rebuilt from the ring of discs, vW is this point in sculpt space ----
+vec3 tubeN(){ vec3 o=(vVP-vVC)/max(length(vAX),1e-4); return normalize(o+vVZ*sign(dot(vVZ,-vVP)+1e-6)*.35); }
+vec3 chromaColor(){
+  vec3 vW=vLP; float uSeed=0., uFlow=.03, uLight=.7, uSheen=.45;
+  vec2 vUv=vec2(vT+uShift,0.); vec3 vNw=tubeN();
+  vec3 cOut;
+
+  float n = softNoise(vec3(vW.xy*0.35, uTime*0.12 + uSeed));
+  float diag = dot(vW.xy, vec2(0.55, 0.83))*0.012;      // gentle diagonal shift across the tube
+  // colours sway around their ref positions instead of drifting away
+  float u = vUv.x + uFlow*sin(uTime*0.35 + uSeed) + diag + n*0.025;
+  vec3 c = softLoop(u, 0.045);
+
+  // ---- soft "illustration" lighting, done in OKLab ----
+  vec3 N = normalize(vNw);
+  // key light from upper-left-front, slowly wandering so the sheen moves
+  vec3 L = normalize(vec3(-0.55 + 0.15*sin(uTime*0.2), 0.65, 0.75));
+  vec3 V = vec3(0.0, 0.0, 1.0);
+  // 1) wrap diffuse: never goes dark, just eases from lit to shade
+  float wrap = clamp((dot(N, L) + 0.6) / 1.6, 0.0, 1.0);
+  wrap = wrap*wrap*(3.0 - 2.0*wrap);
+  float shade = wrap*2.0 - 1.0;                    // -1 shade .. +1 lit
+  // 2) hue-aware shading: shade = darker + richer, light = brighter + softer
+  c.x  += shade*0.05*uLight;
+  c.yz *= 1.0 - shade*0.14*uLight;
+  // 3) broad soft sheen along the tube body (no hard specular)
+  vec3 H = normalize(L + V);
+  float sheen = pow(max(dot(N, H), 0.0), 4.0) * smoothstep(0.25, 0.7, c.x); // dark colours stay rich
+  c.x  += sheen*0.06*uSheen;
+  c.yz *= 1.0 - sheen*0.12*uSheen;
+  // 4) faint cool fill from below-right so the shade side never goes flat/muddy
+  float fill = clamp(dot(N, normalize(vec3(0.6, -0.5, 0.6))), 0.0, 1.0);
+  c.x += fill*0.02*uLight;
+
+  cOut = oklab2lin(c);
+
+  return cOut;
+}
+// ---- Thermal Bloom heat: the hit-branch formula from the HEAT shader, on the disc surface ----
+float thermalHeat(){
+  vec3 n=tubeN(), v=normalize(-vVP), l=normalize(vec3(.4,.65,.7));
+  vec3 p=vLP*.3; float h;
+    float facing=clamp(dot(n,v),0.,1.);
+    float diff=max(dot(n,l),0.);
+    float spec=pow(max(dot(reflect(-l,n),v),0.),10.);
+    float r=sin(3.3*p.x+1.8*sin(2.4*p.y+uTime*.8))*sin(2.9*p.y+1.4*sin(2.2*p.z-uTime*.6));
+    float ridge=smoothstep(.15,.95,r);
+    h=.24+.3*facing+.14*diff+.32*spec+.28*ridge*facing*facing;
+
+  return clamp(h,0.,1.);
+}
 vec3 discColor(){
+  if(uMode>4.5) return vec3(thermalHeat());
+  if(uMode>3.5) return chromaColor();
   if(uHalo>.5) return haloColor();
   vec3 base = uStripe>.5 ? pick(vIdx + (uSplit>.5 && vL.x<0. ? 2. : 0.)) : ramp(vT);
   float g = smoothstep(-1.,1.,mix(vL.y,vL.x,uGradAxis));
@@ -883,7 +1109,7 @@ function resize(){
 new ResizeObserver(resize).observe(stage);
 
 /* ---------- look ---------- */
-const CMODES={holo3d:'Holo 3D',flow:'Sóng chảy',mono:'Đơn sắc blend',classic:'Cổ điển'};
+const CMODES={holo3d:'Holo 3D',flow:'Sóng chảy',mono:'Đơn sắc blend',classic:'Cổ điển',chroma:'Chroma Chain',thermal:'Thermal'};
 const MATS={halo:'Gradient Halo',flat:'Poster phẳng',soft:'Soft 3D',paper:'Giấy dày'};
 function applyLook(){
   const p=PALETTES[S.pal];
@@ -894,9 +1120,11 @@ function applyLook(){
   const st=p.stops||[p.hi,p.c[3],p.c[2],p.c[1],p.c[0],p.deep];
   [U.uS0,U.uS1,U.uS2,U.uS3,U.uS4,U.uS5].forEach((u,i)=>u.value.copy(lin(st[i])));
   U.uRimC.value.copy(lin(p.rimC||p.rim));
+  { const keys=p.keys||palStops(p).map((h,i)=>[h,i/6]);
+    keys.slice(0,12).forEach(([h,u],i)=>{U.uK.value[i].copy(GS.lab(h));U.uKP.value[i]=u;}); U.uN.value=Math.min(keys.length,12); }
   U.uMode.value=Object.keys(CMODES).indexOf(S.colorMode); U.uEnv.value=S.env; U.uFlowA.value=S.flowA;
   U.uHalo.value=S.mat==='halo'?1:0; U.uHaloW.value=S.halo*S.size; U.uRimW.value=S.rimW; U.uDither.value=S.dither;
-  U.uFlat.value=(S.mat==='flat'||S.mat==='halo')?1:0; U.uGlass.value=S.mat==='glass'?1:0; U.uPaper.value=S.mat==='paper'?1:0;
+  U.uFlat.value=(S.mat==='flat'||S.mat==='halo'||S.colorMode==='thermal')?1:0; U.uGlass.value=S.mat==='glass'?1:0; U.uPaper.value=S.mat==='paper'?1:0;
   const glass=S.mat==='glass';
   mat.transparent=glass; mat.depthWrite=!glass; mat.blending=THREE.NormalBlending;
   mat.roughness=S.mat==='paper'?0.95:0.8; mat.needsUpdate=true;
@@ -936,6 +1164,7 @@ function render(dt){
   U.uShift.value=S.colorPhase; U.uTime.value=time;
   U.uUpL.value.set(0,1,0).transformDirection(_inv);
   grainMat.uniforms.uTime.value=time;
+  if(S.colorMode==='thermal'){ renderThermal(); return; }
   renderer.clear(); renderer.render(bgScene,orthoCam); renderer.clearDepth(); renderer.render(scene,camera); renderer.render(grainScene,orthoCam);
 }
 const hud=document.getElementById('hud'),hud2=document.getElementById('hud2');
@@ -955,7 +1184,7 @@ const SLIDERS={
   'g-up':[['upCurveZ','Z theo độ cong (mỗi vòng nâng lên)',0,4,.01],['upDepth','Z sóng đều',0,4,.01],['upFreq','Số sóng Z',0,6,.1],['upDepthK','Giữ Z gốc (file JSON)',0,2,.01],['upSmooth','Làm mượt khung',0,1,.01]],
   'g-layer':[['count','Số lớp',3,400,1],['size','Kích thước',.2,3,.01],['taper','Thon dần (đầu → đuôi)',-1,.95,.01],['headK','Cỡ đầu',.1,3,.01],['tailK','Cỡ đuôi',.1,3,.01],['headCurl','Độ cuộn đầu (Rồng bay)',0,1.5,.01],['spawnK','Cỡ shape mới ở đầu',0,1,.01],['growL','Độ dài đoạn mọc ra',.02,.5,.01],['aspect','Tỉ lệ dẹt',.12,1.6,.01],['thick','Độ dày',0,.08,.001],['stack','Xếp tầng (lệch chiều sâu)',0,2,.01],['gap','Khoảng hở tối thiểu',0,.2,.005]],
   'g-fold':[['fan','Xoè (nghiêng tăng dần)',-120,120,1],['lean','Nghiêng chung',-90,90,1],['pleat','Nếp gấp',0,80,1],['pleatFreq','Số nếp trên khung',.5,30,.5],['twist','Xoắn (vòng)',-6,6,.05],['bunch','Dồn lớp (accordion)',0,.95,.01],['foldK','Gập khi bị dồn',0,1.5,.01]],
-  'g-look':[['env','Ánh sáng môi trường (bụng tối, lưng sáng)',0,1,.01],['flowA','Độ gợn sóng màu (kiểu Sóng chảy)',0,3,.01],['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
+  'g-look':[['env','Ánh sáng môi trường (bụng tối, lưng sáng)',0,1,.01],['flowA','Độ gợn sóng màu (kiểu Sóng chảy)',0,3,.01],['tBlur','Thermal: độ loang nhiệt',0,30,.5],['tShift','Thermal: dịch nhiệt',-.3,.3,.01],['tContrast','Thermal: tương phản',.5,2.2,.01],['tFringe','Thermal: lệch màu (fringe)',0,6,.1],['bulge','Tiêu điểm gradient (gần → xa)',1.1,6,.01],['shade','Độ trải màu trong đĩa',0,1.5,.01],['halo','Độ loang bóng',.05,3,.01],['dither','Hạt trong gradient',0,.45,.005],['colorPhase','Màu chảy (0 → 1)',0,1,.001],['colorDur','Thời gian 0 → 1 (giây)',1,30,.5],['rimW','Viền gradient (rim)',0,.6,.01],['grad','Bóng màu từ lớp trên',0,1,.01],['shadow','Bóng đổ (Soft 3D / Giấy)',0,1,.01],['outline','Viền',0,1,.01],['grain','Grain',0,.15,.005]]
 };
 const DEGK=['fan','lean','pleat','camTheta','camPhi','fov','rotX','rotY','rotZ'];
 const fmt=(k,v)=>k==='colorPhase'?(+v).toFixed(3):k==='colorDur'?(+v).toFixed(1)+'s':k==='zoom'?(+v).toFixed(2)+'×':k==='count'?String(v|0):DEGK.includes(k)?Math.round(v)+'°':k==='thick'||k==='gap'?(+v).toFixed(3):(+v).toFixed(2);
