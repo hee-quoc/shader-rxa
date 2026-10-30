@@ -847,7 +847,7 @@ function loadSkeletonFile(file){
     const vs=normalizePts(r.pts,r.keepZ);
     upSrc=vs; upPts=resample(upSrc,r.closed,UPN); S.upClosed=r.closed; S.skel='upload';
     // show the drawing as drawn first: no extra depth, no smoothing, camera straight on
-    if(!isJSON) Object.assign(S,{upCurveZ:0,upDepth:0,upSmooth:0,camTheta:0,camPhi:0,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0});
+    if(!isJSON) Object.assign(S,{upCurveZ:0,upDepth:0,upSmooth:0,zoom:1,camTheta:0,camPhi:0,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0});
     targetInit=false; syncUI();
     info.textContent=`Đã nạp ${file.name} (${r.label}, ${r.closed?'khép kín':'hở'}).`;
   }).catch(e=>{ info.textContent='Không đọc được file: '+(e.message||e)+' Thử file SVG có <path> hoặc JSON mảng điểm.'; });
@@ -888,9 +888,9 @@ function prepUpload(ph){
   for(let i=0;i<n;i++){
     const p=sp[i], s=i/n, w=0.22*S.amp;
     _up.push(new THREE.Vector3(
-      p.x+w*Math.sin(ph+TAU*s*2),
-      p.y+w*Math.cos(ph*1.3+TAU*s*3),
-      p.z*S.upDepthK+S.upDepth*Math.sin(TAU*s*S.upFreq+ph*0.5)+S.upCurveZ*tz[i]));
+      // the drawing keeps its exact outline seen from the front; "Độ uốn" only moves the path in depth
+      p.x, p.y,
+      p.z*S.upDepthK+S.upDepth*Math.sin(TAU*s*S.upFreq+ph*0.5)+S.upCurveZ*tz[i]+w*1.6*Math.sin(ph+TAU*s*2)));
   }
   _upCurve=new THREE.CatmullRomCurve3(_up,S.upClosed,'centripetal');
 }
