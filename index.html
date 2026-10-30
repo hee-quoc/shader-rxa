@@ -700,7 +700,7 @@ vec3 discColor(){
   return c;
 }
 `+sh.fragmentShader
-    .replace('vec4 diffuseColor = vec4( diffuse, opacity );','if(vVis<.999 && hh(gl_FragCoord.xy*.73+vIdx)>vVis) discard;\n  vec4 diffuseColor = vec4( discColor(), opacity );')
+    .replace('vec4 diffuseColor = vec4( diffuse, opacity );','#ifdef FADE_PASS\n  if(vVis>=.999) discard;\n#else\n  if(vVis<.999) discard;\n#endif\n  vec4 diffuseColor = vec4( discColor(), opacity );')
     .replace('#include <tonemapping_fragment>',`
   {
     vec3 flatC = discColor();
@@ -717,17 +717,24 @@ vec3 discColor(){
       gl_FragColor.a = .22 + .45*pow(vEdge,1.5) + vein*.1;
     }
   }
+  #ifdef FADE_PASS
+  gl_FragColor.a *= vVis;
+  #endif
   #include <tonemapping_fragment>`);
 };
 mat.extensions={derivatives:true};
+// second material for layers that are fading in at the head: same shader, alpha = visibility, no depth write
+const matFade=new THREE.MeshStandardMaterial({roughness:0.82,metalness:0,side:THREE.DoubleSide,transparent:true,depthWrite:false});
+matFade.onBeforeCompile=mat.onBeforeCompile; matFade.extensions=mat.extensions;
+matFade.defines={FADE_PASS:''}; matFade.customProgramCacheKey=()=>'fade';
 const depthMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});
 
-let mesh=null,aT=null,aIdx=null,aVis=null,builtKey='',nbData=null,nbTex=null;
+let meshFade=null,mesh=null,aT=null,aIdx=null,aVis=null,builtKey='',nbData=null,nbTex=null;
 function ensureMesh(){
   const key=S.shape+'|'+S.count+'|'+S.thick.toFixed(3);
   if(key===builtKey) return;
   builtKey=key;
-  if(mesh){sculpt.remove(mesh);mesh.geometry.dispose();}
+  if(mesh){sculpt.remove(mesh);sculpt.remove(meshFade);mesh.geometry.dispose();}
   const g=buildGeometry(S.shape,S.thick);
   aT=new THREE.InstancedBufferAttribute(new Float32Array(S.count),1);aT.setUsage(THREE.DynamicDrawUsage);
   aIdx=new THREE.InstancedBufferAttribute(new Float32Array(S.count),1);aIdx.setUsage(THREE.DynamicDrawUsage);
@@ -738,6 +745,8 @@ function ensureMesh(){
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.frustumCulled=false; mesh.castShadow=true; mesh.receiveShadow=true;
   sculpt.add(mesh);
+  meshFade=new THREE.InstancedMesh(g,matFade,S.count); meshFade.instanceMatrix=mesh.instanceMatrix;
+  meshFade.frustumCulled=false; meshFade.renderOrder=1; sculpt.add(meshFade);
   allocSolver(S.count);
   if(nbTex) nbTex.dispose();
   nbData=new Float32Array(S.count*16);
@@ -1141,7 +1150,7 @@ function applyLook(){
   U.uFlat.value=(S.mat==='flat'||S.mat==='halo'||S.colorMode==='thermal')?1:0; U.uGlass.value=S.mat==='glass'?1:0; U.uPaper.value=S.mat==='paper'?1:0;
   const glass=S.mat==='glass';
   mat.transparent=glass; mat.depthWrite=!glass; mat.blending=THREE.NormalBlending;
-  mat.roughness=S.mat==='paper'?0.95:0.8; mat.needsUpdate=true;
+  mat.roughness=S.mat==='paper'?0.95:0.8; mat.needsUpdate=true; matFade.roughness=mat.roughness; matFade.needsUpdate=true;
   const sh=(S.mat==='soft'||S.mat==='paper')?S.shadow:0;
   sun.intensity=0.25+0.85*sh; hemi.intensity=1.0-0.45*sh;
   sun.castShadow=sh>0.01;
