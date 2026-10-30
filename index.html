@@ -126,8 +126,9 @@ kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border
       <div class="tog"><label for="t-spine">Hiện khung xương</label><input type="checkbox" id="t-spine"></div>
       <div class="upload" id="dropZone">
         <label class="btn" for="skelFile">Upload khung (SVG / JSON)</label>
+        <button class="btn" id="upReverse" type="button">Đảo đầu ↔ đuôi</button>
         <input type="file" id="skelFile" accept=".svg,.json,image/svg+xml,application/json" hidden>
-        <small id="upInfo">Lấy path dài nhất trong SVG. JSON: mảng điểm [[x,y,z], …]. Kéo thả file vào canvas cũng được.</small>
+        <small id="upInfo">Lấy mọi nét trong SVG theo đúng thứ tự và chiều vẽ (điểm đầu nét = đầu rồng). JSON: mảng điểm [[x,y,z], …]. Kéo thả file vào canvas cũng được.</small>
       </div>
       <div id="g-up" class="body" style="padding:0"></div>
       <div class="tog"><label for="t-upclosed">Khép kín (khung upload)</label><input type="checkbox" id="t-upclosed"></div>
@@ -791,7 +792,7 @@ const SKELS={
 };
 function isClosed(){ if(S.skel==='upload') return S.upClosed; return SKELS[S.skel].closed; }
 /* ---------- uploaded skeleton ---------- */
-let upPts=null, _upCurve=null; const _up=[];
+let upPts=null, upSrc=null, _upCurve=null; const _up=[]; // upSrc: the file's points, never modified
 function normalizePts(pts,keepZ){
   let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
   pts.forEach(p=>{for(let k=0;k<3;k++){mn[k]=Math.min(mn[k],p[k]);mx[k]=Math.max(mx[k],p[k]);}});
@@ -822,12 +823,8 @@ function parseSVG(text){
     const plen=c=>{let l=0;for(let i=1;i<c.length;i++) l+=Math.hypot(c[i][0]-c[i-1][0],c[i][1]-c[i-1][1]);return l;};
     pieces=pieces.filter(c=>c.length>1); if(!pieces.length) throw new Error('Không tìm thấy path nào trong SVG.');
     const maxL=Math.max(...pieces.map(plen)); pieces=pieces.filter(c=>plen(c)>maxL*0.08); // drop dots / specks
-    // reading order: left to right by the piece's centre, each piece starting at the end nearer the previous one
-    pieces.sort((a,b)=>a.reduce((s,p)=>s+p[0],0)/a.length-b.reduce((s,p)=>s+p[0],0)/b.length);
-    const pts=[];
-    pieces.forEach(c=>{ const last=pts[pts.length-1];
-      if(last&&Math.hypot(c[c.length-1][0]-last[0],c[c.length-1][1]-last[1])<Math.hypot(c[0][0]-last[0],c[0][1]-last[1])) c=c.slice().reverse();
-      pts.push(...c); });
+    // strokes join in the order and direction they were drawn, so the file decides which end is the head
+    const pts=[]; pieces.forEach(c=>pts.push(...c));
     const one=els.length===1&&pieces.length===1, tag=els[0].tagName.toLowerCase(), d=els[0].getAttribute('d')||'';
     const a=pts[0],b=pts[pts.length-1];
     const closed=one&&(['polygon','circle','ellipse','rect'].includes(tag)||/[zZ]\s*$/.test(d.trim())||Math.hypot(a[0]-b[0],a[1]-b[1])<total*0.01);
@@ -848,7 +845,9 @@ function loadSkeletonFile(file){
     const isJSON=/\.json$/i.test(file.name)||text.trim()[0]==='['||text.trim()[0]==='{';
     const r=isJSON?parseJSON(text):parseSVG(text);
     const vs=normalizePts(r.pts,r.keepZ);
-    upPts=resample(vs,r.closed,UPN); S.upClosed=r.closed; S.skel='upload';
+    upSrc=vs; upPts=resample(upSrc,r.closed,UPN); S.upClosed=r.closed; S.skel='upload';
+    // show the drawing as drawn first: no extra depth, no smoothing, camera straight on
+    if(!isJSON) Object.assign(S,{upCurveZ:0,upDepth:0,upSmooth:0,camTheta:0,camPhi:0,rotX:0,rotY:0,rotZ:0,panX:0,panY:0,panZ:0});
     targetInit=false; syncUI();
     info.textContent=`Đã nạp ${file.name} (${r.label}, ${r.closed?'khép kín':'hở'}).`;
   }).catch(e=>{ info.textContent='Không đọc được file: '+(e.message||e)+' Thử file SVG có <path> hoặc JSON mảng điểm.'; });
@@ -997,10 +996,11 @@ function solve(n){
       contacts++;
       // shrink the larger of the two
       let k=i,o=j; if(SR[j]*SF[j]>SR[i]*SF[i]){k=j;o=i;}
-      let lo=0,hi=SF[k];
-      for(let it=0;it<11;it++){const m=(lo+hi)/2; if(overlaps(k,m,o,SF[o],gap)) hi=m; else lo=m;}
-      SF[k]=lo*0.985;
-      if(SF[k]<0.03) SF[k]=0;
+      const fk=SF[k], fo=SF[o], w=Math.pow((SR[o]*fo)/Math.max(SR[k]*fk,1e-6),6);
+      let lo=0,hi=1;
+      for(let it=0;it<12;it++){const m=(lo+hi)/2; if(overlaps(k,fk*m,o,fo*Math.pow(m,w),gap)) hi=m; else lo=m;}
+      lo*=0.985; SF[k]=fk*lo; SF[o]=fo*Math.pow(lo,w);
+      if(SF[k]<0.03) SF[k]=0; if(SF[o]<0.03) SF[o]=0;
     }
   }
   lastContacts=contacts;
@@ -1265,7 +1265,8 @@ function buildUI(){
   $('t-auto').addEventListener('change',e=>{S.autoRot=e.target.checked;});
   $('t-cut').addEventListener('change',e=>{S.cutBg=e.target.checked;syncUI();});
   $('skelFile').addEventListener('change',e=>{const f=e.target.files[0]; if(f) loadSkeletonFile(f); e.target.value='';});
-  $('t-upclosed').addEventListener('change',e=>{S.upClosed=e.target.checked; if(upPts) upPts=resample(upPts,S.upClosed,UPN); targetInit=false;});
+  $('t-upclosed').addEventListener('change',e=>{S.upClosed=e.target.checked; if(!upSrc&&upPts) upSrc=upPts.map(p=>p.clone()); if(upSrc) upPts=resample(upSrc,S.upClosed,UPN); targetInit=false;});
+  $('upReverse').addEventListener('click',()=>{ if(!upSrc&&upPts) upSrc=upPts.map(p=>p.clone()); if(!upSrc) return; upSrc=upSrc.slice().reverse(); upPts=resample(upSrc,S.upClosed,UPN); targetInit=false; toast('Đã đảo đầu ↔ đuôi'); });
   const st=$('stage');
   st.addEventListener('dragover',e=>{e.preventDefault();st.classList.add('drag');});
   st.addEventListener('dragleave',()=>st.classList.remove('drag'));
@@ -1356,7 +1357,7 @@ function applySettings(o){
   }
   if(!(set.pal in PALETTES)) delete set.pal;
   if(Array.isArray(o.points)&&o.points.length>1)
-    upPts=resample(o.points.map(q=>new THREE.Vector3(+q[0]||0,+q[1]||0,+q[2]||0)),!!o.upClosed,140);
+    { upSrc=o.points.map(q=>new THREE.Vector3(+q[0]||0,+q[1]||0,+q[2]||0)); upPts=resample(upSrc,!!o.upClosed,UPN); }
   S=Object.assign({},DEF,set); targetInit=false; applyLook(); syncUI();
 }
 function importSettings(text){
