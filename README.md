@@ -1,5 +1,7 @@
 # Disc Spine
 
+Author: **Hy Nguyen**
+
 Hệ generative 3D (Three.js r128): các lớp đĩa xếp dọc theo một khung xương, đổ màu bằng shader gradient, chảy liên tục theo thời gian. Toàn bộ app nằm trong một file `index.html`, không cần build.
 
 ## Chạy trên máy
